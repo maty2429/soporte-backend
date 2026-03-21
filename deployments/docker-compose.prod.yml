@@ -1,0 +1,49 @@
+services:
+  api:
+    container_name: soporte-api
+    build:
+      context: ..
+      dockerfile: build/Dockerfile.prod
+    env_file:
+      - ../configs/.env.production
+    ports:
+      - "8080:8080"
+    restart: always
+
+    # La imagen scratch no tiene curl ni wget.
+    # El healthcheck se configura en el load balancer apuntando a GET /livez.
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+
+    # tmpfs para /tmp en caso de que alguna librería necesite escribir temporalmente
+    tmpfs:
+      - /tmp:size=10m,mode=1777
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+    # Logging con rotación
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    networks:
+      - soporte-prod
+
+networks:
+  soporte-prod:
+    driver: bridge

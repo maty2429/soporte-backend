@@ -1,0 +1,49 @@
+# Etapa de construcción
+FROM golang:1.25.5-alpine AS builder
+
+WORKDIR /app
+
+# Instalar certificados CA para llamadas HTTPS salientes
+RUN apk add --no-cache ca-certificates
+
+# Cachear dependencias
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copiar código fuente
+COPY . .
+
+# Construir binario optimizado para producción
+# -tags production: Excluye Swagger y rutas de documentación
+# -ldflags="-s -w": Elimina tabla de símbolos y debug info para reducir tamaño
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -tags production \
+    -trimpath \
+    -ldflags="-s -w" \
+    -o /bin/api \
+    ./cmd/api
+
+# Etapa final ultra-ligera (scratch)
+FROM scratch AS production
+
+# Metadata
+LABEL org.opencontainers.image.title="Tren API" \
+      org.opencontainers.image.description="Production API server" \
+      org.opencontainers.image.vendor="Tren" \
+      org.opencontainers.image.source="https://github.com/mati/tren"
+
+# Copiar certificados desde el builder
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+# Copiar el binario estático
+COPY --from=builder /bin/api /api
+
+# Usar un usuario no root por seguridad (ID de usuario estándar para contenedores sin root)
+USER 65532:65532
+
+# Exponer el puerto
+EXPOSE 8080
+
+# Comando de ejecución
+# Nota: HEALTHCHECK se configura en docker-compose ya que scratch no tiene herramientas
+ENTRYPOINT ["/api"]

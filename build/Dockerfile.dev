@@ -1,0 +1,49 @@
+# Etapa de construcción
+FROM golang:1.25.5-alpine AS builder
+
+WORKDIR /app
+
+# Instalar dependencias necesarias para la compilación (si hubiera CGO, pero es 0)
+RUN apk add --no-cache ca-certificates
+
+# Copiar archivos de dependencia y descargar
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copiar el resto del código fuente
+COPY . .
+
+# Construir el binario (sin tags de producción para incluir Swagger)
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -o /bin/api \
+    ./cmd/api
+
+# Etapa final de desarrollo
+FROM alpine:3.22
+
+# Metadata
+LABEL org.opencontainers.image.title="Tren API (Dev)" \
+      org.opencontainers.image.description="Development API server"
+
+WORKDIR /app
+
+# Instalar herramientas útiles para desarrollo/pruebas
+RUN apk add --no-cache ca-certificates curl tzdata && \
+    adduser -D -u 1000 appuser
+
+# Copiar el binario desde la etapa de construcción
+COPY --from=builder /bin/api /app/api
+
+# Usar usuario non-root
+USER appuser
+
+# Exponer el puerto configurado
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/livez || exit 1
+
+# Ejecutar la aplicación
+ENTRYPOINT ["/app/api"]

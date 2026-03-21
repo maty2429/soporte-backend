@@ -1,0 +1,13 @@
+.git
+.gitignore
+.idea
+.DS_Store
+.env
+configs/.env
+configs/.env.local
+configs/.env.docker
+configs/.env.development
+configs/.env.production
+tmp
+bin
+coverage.out

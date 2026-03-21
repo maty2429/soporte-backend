@@ -1,0 +1,161 @@
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+output:
+  formats:
+    - format: colored-line-number
+  sort-results: true
+
+linters:
+  enable:
+    # Seguridad
+    - gosec          # Detecta problemas de seguridad
+    - bodyclose      # Verifica que body de HTTP se cierre
+    - noctx          # Detecta HTTP requests sin context
+    - rowserrcheck   # Verifica errores de sql.Rows
+    - sqlclosecheck  # Detecta sql.Rows sin cerrar
+    - makezero       # Detecta slices con append en lugar de make
+
+    # Bugs y errores
+    - errcheck       # Detecta errores no manejados
+    - govet          # Reporta construcciones sospechosas
+    - staticcheck    # Análisis estático avanzado
+    - ineffassign    # Detecta asignaciones ineficientes
+    - typecheck      # Parser y type-checker de Go
+    - unused         # Detecta código no usado
+    - copyloopvar    # Detecta variables de loop copiadas incorrectamente
+
+    # Calidad de código
+    - gofmt          # Verifica formato de código
+    - goimports      # Verifica imports
+    - misspell       # Detecta errores ortográficos
+    - unconvert      # Detecta conversiones innecesarias
+    - unparam        # Detecta parámetros no usados
+    - nakedret       # Detecta returns desnudos en funciones grandes
+    - prealloc       # Detecta slices que podrían pre-alocarse
+    - nilerr         # Detecta código que retorna nil en lugar de error
+    - errname        # Verifica nombres de errores (ErrXxx)
+    - errorlint      # Detecta problemas con wrapping de errores
+    - gocritic       # Linter extensible con muchas verificaciones
+    - revive         # Reemplazo moderno de golint
+
+    # Performance
+    - goconst        # Detecta strings repetidos que deberían ser constantes
+
+linters-settings:
+  gosec:
+    excludes:
+      - G104  # Permitir errores no chequeados en defer
+    severity: medium
+    confidence: medium
+
+  errcheck:
+    check-blank: true
+    check-type-assertions: true
+
+  govet:
+    enable-all: true
+    disable:
+      - shadow         # Muy ruidoso, puede habilitarse después
+      - fieldalignment # Optimización de memoria, no crítico
+
+  staticcheck:
+    checks:
+      - all
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+    disabled-checks:
+      - hugeParam         # Structs grandes por valor están ok
+      - unnecessaryBlock  # Bloques para organizar código están ok
+      - httpNoBody        # En tests nil está bien
+      - rangeValCopy      # Copias en range no son críticas aquí
+
+  revive:
+    severity: warning
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: error-naming
+      - name: error-return
+      - name: error-strings
+      - name: exported
+        disabled: true  # No requerir comentarios de exportación (plantilla)
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: package-comments
+        disabled: true  # No requerir comentarios de paquete
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unreachable-code
+
+  nakedret:
+    max-func-lines: 30
+
+  misspell:
+    locale: US
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  exclude-rules:
+    # Ignorar errores no chequeados en tests
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+
+    # Ignorar magic numbers en tests
+    - path: _test\.go
+      linters:
+        - goconst
+
+    # Permitir dot imports en tests
+    - path: _test\.go
+      text: "dot-imports"
+
+    # Ignorar comentarios de exportación en handlers (tienen swagger docs)
+    - path: internal/delivery/http/handlers/
+      linters:
+        - revive
+      text: "exported:"
+
+    # Ignorar context.Background() en main y tests
+    - path: cmd/
+      linters:
+        - noctx
+
+    # exitAfterDefer en main es intencional (el defer no es crítico al salir)
+    - path: cmd/
+      linters:
+        - gocritic
+      text: "exitAfterDefer"
+
+    # Errores de fmt.Fprint en CLI no son críticos
+    - path: cmd/migrate/
+      linters:
+        - errcheck
+      text: "fmt.Fprint"
+
+  exclude-dirs:
+    - vendor
+    - .git

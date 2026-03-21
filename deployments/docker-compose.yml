@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: soporte-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: soporte
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d soporte"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - soporte-dev
+
+  api:
+    container_name: soporte-api
+    build:
+      context: ..
+      dockerfile: build/Dockerfile.dev
+    env_file:
+      - ../configs/.env.development
+    environment:
+      # Sobreescribe el host de la DB para apuntar al servicio postgres del compose
+      - DB_DSN=host=postgres user=postgres password=postgres dbname=soporte port=5432 sslmode=disable TimeZone=America/Santiago
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/livez"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+    networks:
+      - soporte-dev
+
+networks:
+  soporte-dev:
+    driver: bridge
+
+volumes:
+  postgres_data:

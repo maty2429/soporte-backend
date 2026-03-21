@@ -1,0 +1,331 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Soporte API",
+    "version": "0.1.0",
+    "description": "API REST del sistema de soporte con arquitectura hexagonal."
+  },
+  "servers": [
+    { "url": "/" }
+  ],
+  "tags": [
+    { "name": "health",       "description": "Probes de salud e infraestructura" },
+    { "name": "solicitantes", "description": "Solicitantes del sistema de soporte" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Healthcheck general",
+        "responses": {
+          "200": { "description": "Servicio operativo" }
+        }
+      }
+    },
+    "/livez": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Liveness probe",
+        "responses": {
+          "200": { "description": "Proceso vivo" }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Readiness probe",
+        "responses": {
+          "200": { "description": "Instancia lista para recibir tráfico" },
+          "503": { "description": "Instancia no lista (base de datos no disponible)" }
+        }
+      }
+    },
+
+    "/api/v1/solicitantes": {
+      "get": {
+        "tags": ["solicitantes"],
+        "summary": "Listar solicitantes",
+        "parameters": [
+          {
+            "in": "query", "name": "limit",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 },
+            "description": "Cantidad máxima de resultados"
+          },
+          {
+            "in": "query", "name": "offset",
+            "schema": { "type": "integer", "minimum": 0, "default": 0 },
+            "description": "Cantidad de resultados a omitir"
+          },
+          {
+            "in": "query", "name": "q",
+            "schema": { "type": "string", "maxLength": 100 },
+            "description": "Búsqueda por nombre completo o RUT"
+          },
+          {
+            "in": "query", "name": "estado",
+            "schema": { "type": "boolean" },
+            "description": "Filtrar por estado activo/inactivo"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de solicitantes",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SolicitanteListResponse" }
+              }
+            }
+          },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "post": {
+        "tags": ["solicitantes"],
+        "summary": "Crear solicitante",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateSolicitanteRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Solicitante creado",
+            "headers": {
+              "Location": {
+                "schema": { "type": "string" },
+                "description": "URL del recurso creado",
+                "example": "/api/v1/solicitantes/1"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SolicitanteCreatedSingleResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/solicitantes/{id}": {
+      "get": {
+        "tags": ["solicitantes"],
+        "summary": "Obtener solicitante por ID",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitante encontrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SolicitanteSingleResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "patch": {
+        "tags": ["solicitantes"],
+        "summary": "Actualizar solicitante (parcial)",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateSolicitanteRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitante actualizado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SolicitanteSingleResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/solicitantes/rut/{rut}": {
+      "get": {
+        "tags": ["solicitantes"],
+        "summary": "Obtener solicitante por RUT compuesto",
+        "parameters": [
+          {
+            "name": "rut",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "example": "123456789" },
+            "description": "RUT completo; el último carácter se interpreta como DV. Acepta formato con puntos y guion."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitante encontrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SolicitanteSingleResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    }
+  },
+
+  "components": {
+    "parameters": {
+      "IDParam": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "minimum": 1 },
+        "description": "ID del recurso"
+      }
+    },
+
+    "schemas": {
+      "Solicitante": {
+        "type": "object",
+        "properties": {
+          "id":              { "type": "integer",  "example": 1 },
+          "id_servicio":     { "type": "integer",  "example": 12, "nullable": true },
+          "servicio":        { "$ref": "#/components/schemas/Servicio", "nullable": true },
+          "correo":          { "type": "string",   "format": "email", "example": "juan.perez@hospital.cl" },
+          "rut":             { "type": "string",   "example": "12345678" },
+          "dv":              { "type": "string",   "example": "9" },
+          "nombre_completo": { "type": "string",   "example": "Juan Pérez González" },
+          "anexo":           { "type": "integer",  "example": 2301, "nullable": true },
+          "estado":          { "type": "boolean",  "example": true }
+        }
+      },
+
+      "Servicio": {
+        "type": "object",
+        "properties": {
+          "id":                         { "type": "integer", "example": 12 },
+          "edificio":                   { "type": "string", "example": "Hospital" },
+          "piso":                       { "type": "integer", "example": 2 },
+          "servicios":                  { "type": "string", "example": "TI" },
+          "ubicacion":                  { "type": "string", "example": "Torre A" },
+          "id_nivel_prioridad_default": { "type": "integer", "example": 1, "nullable": true }
+        }
+      },
+
+      "CreateSolicitanteRequest": {
+        "type": "object",
+        "required": ["rut", "dv", "nombre_completo"],
+        "properties": {
+          "id_servicio":     { "type": "integer", "minimum": 1, "example": 12, "nullable": true },
+          "correo":          { "type": "string",  "format": "email", "maxLength": 100, "example": "juan.perez@hospital.cl" },
+          "rut":             { "type": "string",  "maxLength": 10,  "example": "12345678" },
+          "dv":              { "type": "string",  "minLength": 1,   "maxLength": 1, "example": "9" },
+          "nombre_completo": { "type": "string",  "example": "Juan Pérez González" },
+          "anexo":           { "type": "integer", "minimum": 1, "example": 2301 },
+          "estado":          { "type": "boolean", "example": true }
+        }
+      },
+
+      "UpdateSolicitanteRequest": {
+        "type": "object",
+        "properties": {
+          "id_servicio":     { "type": "integer", "minimum": 1, "example": 12, "nullable": true },
+          "correo":          { "type": "string",  "format": "email", "maxLength": 100, "example": "juan.perez@hospital.cl" },
+          "rut":             { "type": "string",  "maxLength": 10,  "example": "12345678" },
+          "dv":              { "type": "string",  "minLength": 1,   "maxLength": 1, "example": "9" },
+          "nombre_completo": { "type": "string",  "example": "Juan Pérez González" },
+          "anexo":           { "type": "integer", "minimum": 1, "example": 2301 },
+          "estado":          { "type": "boolean", "example": false }
+        }
+      },
+
+      "SolicitanteSingleResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/Solicitante" }
+        }
+      },
+
+      "SolicitanteCreated": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 }
+        }
+      },
+
+      "SolicitanteCreatedSingleResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/SolicitanteCreated" }
+        }
+      },
+
+      "SolicitanteListResponse": {
+        "type": "object",
+        "properties": {
+          "data":   { "type": "array", "items": { "$ref": "#/components/schemas/Solicitante" } },
+          "total":  { "type": "integer", "example": 42 },
+          "limit":  { "type": "integer", "example": 20 },
+          "offset": { "type": "integer", "example": 0 }
+        }
+      },
+
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code":    { "type": "string",  "example": "NOT_FOUND" },
+          "message": { "type": "string",  "example": "solicitante not found" }
+        }
+      }
+    },
+
+    "responses": {
+      "BadRequest": {
+        "description": "Solicitud inválida",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+        }
+      },
+      "NotFound": {
+        "description": "Recurso no encontrado",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+        }
+      },
+      "Conflict": {
+        "description": "Conflicto — RUT o correo ya existe",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+        }
+      },
+      "InternalError": {
+        "description": "Error interno del servidor",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+        }
+      }
+    }
+  }
+}
