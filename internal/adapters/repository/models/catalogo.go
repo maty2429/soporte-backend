@@ -38,6 +38,20 @@ type MotivoPausa struct {
 
 func (MotivoPausa) TableName() string { return "motivos_pausa" }
 
+type CatalogoFalla struct {
+	ID                       int    `gorm:"column:id;primaryKey"`
+	CodigoFalla              string `gorm:"column:codigo_falla;not null;uniqueIndex"`
+	DescripcionFalla         string `gorm:"column:descripcion_falla;not null"`
+	Complejidad              int    `gorm:"column:complejidad;not null;default:1"`
+	TiempoResolucionEstimado string `gorm:"column:tiempo_resolucion_estimado"`
+	RequiereVisitaFisica     *bool  `gorm:"column:requiere_visita_fisica;default:true"`
+	IDDepartamento           *int   `gorm:"column:id_departamento"`
+	Categoria                string `gorm:"column:categoria"`
+	Subcategoria             string `gorm:"column:subcategoria"`
+}
+
+func (CatalogoFalla) TableName() string { return "catalogo_fallas" }
+
 type TipoTurno struct {
 	ID          int    `gorm:"column:id;primaryKey;autoIncrement"`
 	Nombre      string `gorm:"column:nombre;size:50;not null;uniqueIndex"`

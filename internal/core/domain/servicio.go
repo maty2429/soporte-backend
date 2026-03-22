@@ -6,5 +6,6 @@ type Servicio struct {
 	Piso                    int
 	Servicios               string
 	Ubicacion               string
+	Unidades                string
 	IDNivelPrioridadDefault *int
 }

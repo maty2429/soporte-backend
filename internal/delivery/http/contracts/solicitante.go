@@ -2,7 +2,7 @@ package contracts
 
 import "soporte/internal/core/domain"
 
-type ServicioResponse struct {
+type SolicitanteServicioEmbed struct {
 	ID                      int    `json:"id"`
 	Edificio                string `json:"edificio"`
 	Piso                    int    `json:"piso"`
@@ -41,7 +41,7 @@ type UpdateSolicitanteRequest struct {
 type SolicitanteResponse struct {
 	ID             int               `json:"id"`
 	IDServicio     *int              `json:"id_servicio,omitempty"`
-	Servicio       *ServicioResponse `json:"servicio,omitempty"`
+	Servicio       *SolicitanteServicioEmbed `json:"servicio,omitempty"`
 	Correo         string            `json:"correo"`
 	Rut            string            `json:"rut"`
 	Dv             string            `json:"dv"`
@@ -64,12 +64,12 @@ func NewSolicitanteResponse(sol domain.Solicitante) SolicitanteResponse {
 	}
 }
 
-func newServicioResponse(servicio *domain.Servicio) *ServicioResponse {
+func newServicioResponse(servicio *domain.Servicio) *SolicitanteServicioEmbed {
 	if servicio == nil {
 		return nil
 	}
 
-	return &ServicioResponse{
+	return &SolicitanteServicioEmbed{
 		ID:                      servicio.ID,
 		Edificio:                servicio.Edificio,
 		Piso:                    servicio.Piso,

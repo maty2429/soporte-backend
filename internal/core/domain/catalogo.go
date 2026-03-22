@@ -28,6 +28,18 @@ type MotivoPausa struct {
 	RequiereAutorizacion  bool
 }
 
+type CatalogoFalla struct {
+	ID                       int
+	CodigoFalla              string
+	DescripcionFalla         string
+	Complejidad              int
+	TiempoResolucionEstimado string
+	RequiereVisitaFisica     bool
+	IDDepartamento           *int
+	Categoria                string
+	Subcategoria             string
+}
+
 type TipoTurno struct {
 	ID          int
 	Nombre      string

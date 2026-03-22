@@ -57,13 +57,26 @@ func NewRouter(log *slog.Logger, cfg config.Config, db *gorm.DB, startedAt time.
 	healthHandler := handlers.NewHealthHandler(cfg, db, startedAt)
 	docsHandler := docs.NewDocsHandler()
 
-	solicitanteHandler := handlers.NewSolicitanteHandler(services.NewSolicitanteService(gormrepo.NewSolicitanteRepository(db)))
-	catalogoHandler := handlers.NewCatalogoHandler(services.NewCatalogoService(gormrepo.NewCatalogoRepository(db)))
+	solicitanteRepo := gormrepo.NewSolicitanteRepository(db)
+	catalogoRepo := gormrepo.NewCatalogoRepository(db)
+
+	tecnicoRepo := gormrepo.NewTecnicoRepository(db)
+
+	solicitanteHandler := handlers.NewSolicitanteHandler(services.NewSolicitanteService(solicitanteRepo))
+	tecnicoHandler := handlers.NewTecnicoHandler(services.NewTecnicoService(tecnicoRepo))
+	catalogoHandler := handlers.NewCatalogoHandler(services.NewCatalogoService(catalogoRepo))
+	servicioHandler := handlers.NewServicioHandler(services.NewServicioService(gormrepo.NewServicioRepository(db)))
+	catalogoFallaHandler := handlers.NewCatalogoFallaHandler(services.NewCatalogoFallaService(gormrepo.NewCatalogoFallaRepository(db)))
+	ticketHandler := handlers.NewTicketHandler(services.NewTicketService(gormrepo.NewTicketRepository(db), solicitanteRepo, catalogoRepo))
 
 	v1 := router.Group("/api/v1")
 
 	registerInfraRoutes(router, v1, healthHandler, docsHandler, cfg)
 	registerSolicitanteRoutes(v1, solicitanteHandler)
+	registerTecnicoRoutes(v1, tecnicoHandler)
+	registerTicketRoutes(v1, ticketHandler)
+	registerServicioRoutes(v1, servicioHandler)
+	registerCatalogoFallaRoutes(v1, catalogoFallaHandler)
 	registerCatalogoRoutes(v1, catalogoHandler)
 
 	registerRootRoute(router, cfg)

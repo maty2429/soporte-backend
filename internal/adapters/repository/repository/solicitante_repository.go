@@ -119,7 +119,7 @@ func toSolicitanteDomain(row dbmodels.Solicitante) domain.Solicitante {
 	return domain.Solicitante{
 		ID:             row.ID,
 		IDServicio:     row.IDServicio,
-		Servicio:       toServicioDomain(row.Servicio),
+		Servicio:       toServicioPtr(row.Servicio),
 		Correo:         correo,
 		Rut:            row.Rut,
 		Dv:             row.Dv,
@@ -129,7 +129,7 @@ func toSolicitanteDomain(row dbmodels.Solicitante) domain.Solicitante {
 	}
 }
 
-func toServicioDomain(row *dbmodels.Servicio) *domain.Servicio {
+func toServicioPtr(row *dbmodels.Servicio) *domain.Servicio {
 	if row == nil {
 		return nil
 	}
@@ -140,6 +140,7 @@ func toServicioDomain(row *dbmodels.Servicio) *domain.Servicio {
 		Piso:                    row.Piso,
 		Servicios:               row.Servicios,
 		Ubicacion:               row.Ubicacion,
+		Unidades:                row.Unidades,
 		IDNivelPrioridadDefault: row.IDNivelPrioridadDefault,
 	}
 }

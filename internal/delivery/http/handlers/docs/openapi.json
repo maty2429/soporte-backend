@@ -10,7 +10,9 @@
   ],
   "tags": [
     { "name": "health",       "description": "Probes de salud e infraestructura" },
-    { "name": "solicitantes", "description": "Solicitantes del sistema de soporte" }
+    { "name": "solicitantes", "description": "Solicitantes del sistema de soporte" },
+    { "name": "tickets",      "description": "Tickets de soporte" },
+    { "name": "catalogos",    "description": "Catálogos del sistema (dropdowns)" }
   ],
   "paths": {
     "/health": {
@@ -192,6 +194,1040 @@
           "500": { "$ref": "#/components/responses/InternalError" }
         }
       }
+    },
+
+    "/api/v1/tickets/nro/{nro}": {
+      "get": {
+        "tags": ["tickets"],
+        "summary": "Obtener ticket por número",
+        "description": "Retorna todos los datos del ticket incluyendo trazabilidad y bitácora.",
+        "parameters": [
+          {
+            "name": "nro",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "TK-384721-26"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle completo del ticket",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TicketDetalleSingleResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tickets": {
+      "get": {
+        "tags": ["tickets"],
+        "summary": "Listar tickets",
+        "description": "Lista tickets con filtros opcionales y paginación.",
+        "parameters": [
+          {
+            "in": "query", "name": "estado",
+            "schema": { "type": "string" },
+            "description": "Filtrar por código de estado (CRE, ASI, PRO, PAU, etc.)"
+          },
+          {
+            "in": "query", "name": "id_tecnico",
+            "schema": { "type": "integer" },
+            "description": "Filtrar por técnico asignado"
+          },
+          {
+            "in": "query", "name": "id_solicitante",
+            "schema": { "type": "integer" },
+            "description": "Filtrar por solicitante"
+          },
+          {
+            "in": "query", "name": "id_departamento",
+            "schema": { "type": "integer" },
+            "description": "Filtrar por departamento de soporte"
+          },
+          {
+            "in": "query", "name": "critico",
+            "schema": { "type": "boolean" },
+            "description": "Filtrar por tickets críticos"
+          },
+          {
+            "in": "query", "name": "limit",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+          },
+          {
+            "in": "query", "name": "offset",
+            "schema": { "type": "integer", "minimum": 0, "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de tickets",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TicketListResponse" }
+              }
+            }
+          },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "post": {
+        "tags": ["tickets"],
+        "summary": "Crear ticket de soporte",
+        "description": "Crea un ticket nuevo con estado CREADO (CRE). Genera automáticamente el número de ticket (TK-XXXXXX-YY) y registra la trazabilidad inicial.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateTicketRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket creado",
+            "headers": {
+              "Location": {
+                "schema": { "type": "string" },
+                "description": "URL del recurso creado",
+                "example": "/api/v1/tickets/TK-384721-26"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TicketCreatedSingleResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tickets/{id}": {
+      "get": {
+        "tags": ["tickets"],
+        "summary": "Obtener ticket por ID",
+        "description": "Retorna los datos del ticket sin bitácora ni trazabilidad.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket encontrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TicketSingleResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "patch": {
+        "tags": ["tickets"],
+        "summary": "Actualizar campos del ticket",
+        "description": "Actualiza campos editables del ticket (no cambia estado ni técnico).",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateTicketRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket actualizado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TicketSingleResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tickets/{id}/visto": {
+      "patch": {
+        "tags": ["tickets"],
+        "summary": "Marcar ticket como visto por técnico",
+        "description": "Cambia el estado de ASI a VITEC. Solo funciona si el ticket está en estado ASIGNADO.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VistoTecnicoRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket marcado como visto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "ticket marcado como visto por técnico" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tickets/{id}/cancelar": {
+      "patch": {
+        "tags": ["tickets"],
+        "summary": "Cancelar ticket",
+        "description": "Cancela el ticket desde cualquier estado (excepto ya cancelado o cerrado). Cambia a CAN y registra trazabilidad.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CancelTicketRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket cancelado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "ticket cancelado correctamente" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tickets/{id}/cerrar": {
+      "patch": {
+        "tags": ["tickets"],
+        "summary": "Cerrar ticket",
+        "description": "Cierra el ticket (debe estar en estado TER). Crea valorización del técnico, cambia estado a CER y registra trazabilidad.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CloseTicketRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket cerrado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "ticket cerrado correctamente" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tickets/{id}/estado": {
+      "patch": {
+        "tags": ["tickets"],
+        "summary": "Cambiar estado del ticket",
+        "description": "Cambia el estado del ticket y registra el cambio en trazabilidad.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChangeEstadoRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado actualizado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "estado actualizado correctamente" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tickets/{id}/bitacora": {
+      "get": {
+        "tags": ["tickets"],
+        "summary": "Listar bitácora del ticket",
+        "description": "Retorna todas las entradas de bitácora del ticket.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de bitácora",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/BitacoraResponse" } },
+                    "request_id": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "post": {
+        "tags": ["tickets"],
+        "summary": "Crear entrada de bitácora",
+        "description": "Registra un comentario en la bitácora del ticket.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateBitacoraRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Entrada de bitácora creada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BitacoraSingleResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tickets/{id}/asignar": {
+      "patch": {
+        "tags": ["tickets"],
+        "summary": "Asignar técnico y categorizar ticket",
+        "description": "Asigna un técnico, catálogo de falla y nivel de prioridad al ticket. Cambia el estado a ASIGNADO (ASI) y registra la trazabilidad.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AssignTicketRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket asignado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssignTicketSingleResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tickets/{id}/pausas": {
+      "get": {
+        "tags": ["tickets"],
+        "summary": "Listar pausas de un ticket",
+        "description": "Retorna las pausas del ticket con paginación y filtro opcional por estado (PENDIENTE, APROBADA, RECHAZADA).",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" },
+          {
+            "in": "query", "name": "estado",
+            "schema": { "type": "string", "enum": ["PENDIENTE", "APROBADA", "RECHAZADA"] },
+            "description": "Filtrar por estado de la pausa"
+          },
+          {
+            "in": "query", "name": "limit",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 },
+            "description": "Cantidad máxima de resultados"
+          },
+          {
+            "in": "query", "name": "offset",
+            "schema": { "type": "integer", "minimum": 0, "default": 0 },
+            "description": "Cantidad de resultados a omitir"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de pausas",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PausaListResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "post": {
+        "tags": ["tickets"],
+        "summary": "Crear pausa en ticket",
+        "description": "Pausa un ticket en estado EN PROGRESO (PRO). Si el motivo requiere autorización, la pausa queda en estado PENDIENTE; si no, se aprueba automáticamente. Cambia el estado del ticket a PAUSADO (PAU) y registra trazabilidad.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreatePausaRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pausa creada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PausaSingleResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tickets/{id}/reanudar": {
+      "patch": {
+        "tags": ["tickets"],
+        "summary": "Reanudar ticket pausado",
+        "description": "Reanuda un ticket en estado PAUSADO (PAU). Cierra la pausa activa aprobada y cambia el estado del ticket a EN PROGRESO (PRO).",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReanudarTicketRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket reanudado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "ticket reanudado correctamente" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/pausas/{id}/resolver": {
+      "patch": {
+        "tags": ["tickets"],
+        "summary": "Resolver pausa (aprobar o rechazar)",
+        "description": "Resuelve una pausa pendiente de autorización. Si se aprueba, el ticket permanece pausado. Si se rechaza, el ticket vuelve a EN PROGRESO (PRO).",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ResolverPausaRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pausa resuelta correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "pausa resuelta correctamente" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tickets/{id}/traspasos": {
+      "get": {
+        "tags": ["tickets"],
+        "summary": "Listar traspasos de un ticket",
+        "description": "Retorna los traspasos del ticket con paginación y filtro opcional por estado (PENDIENTE, ACEPTADO, RECHAZADO).",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" },
+          {
+            "in": "query", "name": "estado",
+            "schema": { "type": "string", "enum": ["PENDIENTE", "ACEPTADO", "RECHAZADO"] },
+            "description": "Filtrar por estado del traspaso"
+          },
+          {
+            "in": "query", "name": "limit",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 },
+            "description": "Cantidad máxima de resultados"
+          },
+          {
+            "in": "query", "name": "offset",
+            "schema": { "type": "integer", "minimum": 0, "default": 0 },
+            "description": "Cantidad de resultados a omitir"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de traspasos",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TraspasoListResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "post": {
+        "tags": ["tickets"],
+        "summary": "Solicitar traspaso de ticket",
+        "description": "Crea una solicitud de traspaso a otro técnico. El ticket debe estar en EN PROGRESO (PRO). Cambia el estado a SOLICITUD DE TRASPASO (STR).",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateTraspasoRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Solicitud de traspaso creada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TraspasoSingleResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/traspasos/{id}/resolver": {
+      "patch": {
+        "tags": ["tickets"],
+        "summary": "Resolver traspaso (aceptar o rechazar)",
+        "description": "Si se acepta: cambia técnico asignado, registra TRA + PRO en trazabilidad. Si se rechaza: ticket vuelve a PRO.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IDParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ResolverTraspasoRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Traspaso resuelto correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "traspaso resuelto correctamente" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tipos-ticket": {
+      "get": {
+        "tags": ["catalogos"],
+        "summary": "Listar tipos de ticket",
+        "responses": {
+          "200": { "description": "Listado de tipos de ticket" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "post": {
+        "tags": ["catalogos"],
+        "summary": "Crear tipo de ticket",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cod_tipo_ticket", "descripcion"],
+                "properties": {
+                  "cod_tipo_ticket": { "type": "string", "example": "INC" },
+                  "descripcion":     { "type": "string", "example": "Incidencia" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Tipo de ticket creado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/v1/tipos-ticket/{id}": {
+      "patch": {
+        "tags": ["catalogos"],
+        "summary": "Actualizar tipo de ticket",
+        "parameters": [ { "$ref": "#/components/parameters/IDParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cod_tipo_ticket": { "type": "string" },
+                  "descripcion":     { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Tipo de ticket actualizado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/niveles-prioridad": {
+      "get": {
+        "tags": ["catalogos"],
+        "summary": "Listar niveles de prioridad",
+        "responses": {
+          "200": { "description": "Listado de niveles de prioridad" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "post": {
+        "tags": ["catalogos"],
+        "summary": "Crear nivel de prioridad",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["descripcion"],
+                "properties": {
+                  "descripcion": { "type": "string", "example": "Alta" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Nivel de prioridad creado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/v1/niveles-prioridad/{id}": {
+      "patch": {
+        "tags": ["catalogos"],
+        "summary": "Actualizar nivel de prioridad",
+        "parameters": [ { "$ref": "#/components/parameters/IDParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descripcion": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Nivel de prioridad actualizado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tipos-tecnico": {
+      "get": {
+        "tags": ["catalogos"],
+        "summary": "Listar tipos de técnico",
+        "responses": {
+          "200": { "description": "Listado de tipos de técnico" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "post": {
+        "tags": ["catalogos"],
+        "summary": "Crear tipo de técnico",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["descripcion"],
+                "properties": {
+                  "descripcion": { "type": "string", "example": "Especialista" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Tipo de técnico creado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/v1/tipos-tecnico/{id}": {
+      "patch": {
+        "tags": ["catalogos"],
+        "summary": "Actualizar tipo de técnico",
+        "parameters": [ { "$ref": "#/components/parameters/IDParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descripcion": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Tipo de técnico actualizado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/departamentos-soporte": {
+      "get": {
+        "tags": ["catalogos"],
+        "summary": "Listar departamentos de soporte",
+        "responses": {
+          "200": { "description": "Listado de departamentos de soporte" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "post": {
+        "tags": ["catalogos"],
+        "summary": "Crear departamento de soporte",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cod_departamento", "descripcion"],
+                "properties": {
+                  "cod_departamento": { "type": "string", "example": "TI" },
+                  "descripcion":      { "type": "string", "example": "Tecnología" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Departamento creado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/v1/departamentos-soporte/{id}": {
+      "patch": {
+        "tags": ["catalogos"],
+        "summary": "Actualizar departamento de soporte",
+        "parameters": [ { "$ref": "#/components/parameters/IDParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cod_departamento": { "type": "string" },
+                  "descripcion":      { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Departamento actualizado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/motivos-pausa": {
+      "get": {
+        "tags": ["catalogos"],
+        "summary": "Listar motivos de pausa",
+        "responses": {
+          "200": { "description": "Listado de motivos de pausa" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "post": {
+        "tags": ["catalogos"],
+        "summary": "Crear motivo de pausa",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["motivo_pausa"],
+                "properties": {
+                  "motivo_pausa":          { "type": "string", "maxLength": 255, "example": "Falta de repuestos" },
+                  "requiere_autorizacion": { "type": "boolean", "example": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Motivo de pausa creado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/v1/motivos-pausa/{id}": {
+      "patch": {
+        "tags": ["catalogos"],
+        "summary": "Actualizar motivo de pausa",
+        "parameters": [ { "$ref": "#/components/parameters/IDParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "motivo_pausa":          { "type": "string", "maxLength": 255 },
+                  "requiere_autorizacion": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Motivo de pausa actualizado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+
+    "/api/v1/tipos-turno": {
+      "get": {
+        "tags": ["catalogos"],
+        "summary": "Listar tipos de turno",
+        "responses": {
+          "200": { "description": "Listado de tipos de turno" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "post": {
+        "tags": ["catalogos"],
+        "summary": "Crear tipo de turno",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nombre"],
+                "properties": {
+                  "nombre":      { "type": "string", "maxLength": 50, "example": "Diurno" },
+                  "descripcion": { "type": "string", "maxLength": 255, "example": "Turno de 8:00 a 17:00" },
+                  "estado":      { "type": "boolean", "example": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Tipo de turno creado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/v1/tipos-turno/{id}": {
+      "patch": {
+        "tags": ["catalogos"],
+        "summary": "Actualizar tipo de turno",
+        "parameters": [ { "$ref": "#/components/parameters/IDParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre":      { "type": "string", "maxLength": 50 },
+                  "descripcion": { "type": "string", "maxLength": 255 },
+                  "estado":      { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Tipo de turno actualizado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
     }
   },
 
@@ -289,6 +1325,386 @@
           "total":  { "type": "integer", "example": 42 },
           "limit":  { "type": "integer", "example": 20 },
           "offset": { "type": "integer", "example": 0 }
+        }
+      },
+
+      "CreateTicketRequest": {
+        "type": "object",
+        "required": ["id_solicitante", "id_servicio", "id_tipo_ticket", "id_nivel_prioridad", "id_departamento_soporte", "detalle_falla_reportada"],
+        "properties": {
+          "id_solicitante":          { "type": "integer", "minimum": 1, "example": 1 },
+          "id_servicio":             { "type": "integer", "minimum": 1, "example": 1 },
+          "id_tipo_ticket":          { "type": "integer", "minimum": 1, "example": 1 },
+          "id_nivel_prioridad":      { "type": "integer", "minimum": 1, "example": 1 },
+          "id_departamento_soporte": { "type": "integer", "minimum": 1, "example": 1 },
+          "critico":                 { "type": "boolean", "example": false },
+          "detalle_falla_reportada": { "type": "string", "example": "No enciende el equipo de la sala 301" },
+          "ubicacion_obs":           { "type": "string", "example": "Sala de servidores", "nullable": true }
+        }
+      },
+
+      "TicketCreated": {
+        "type": "object",
+        "properties": {
+          "nro_ticket": { "type": "string", "example": "TK-384721-26" }
+        }
+      },
+
+      "TicketCreatedSingleResponse": {
+        "type": "object",
+        "properties": {
+          "data":       { "$ref": "#/components/schemas/TicketCreated" },
+          "request_id": { "type": "string", "example": "abc123" }
+        }
+      },
+
+      "CloseTicketRequest": {
+        "type": "object",
+        "required": ["id_solicitante", "nota", "observacion"],
+        "properties": {
+          "id_solicitante": { "type": "integer", "example": 1 },
+          "nota":           { "type": "integer", "minimum": 1, "maximum": 5, "example": 5 },
+          "comentarios":    { "type": "string", "example": "Excelente trabajo del técnico" },
+          "observacion":    { "type": "string", "example": "Se reparó equipo correctamente, queda operativo" }
+        }
+      },
+
+      "ChangeEstadoRequest": {
+        "type": "object",
+        "required": ["cod_estado_ticket", "rut_responsable"],
+        "properties": {
+          "cod_estado_ticket": { "type": "string", "example": "PRO" },
+          "rut_responsable":   { "type": "string", "example": "12345678-K" }
+        }
+      },
+
+      "CreateBitacoraRequest": {
+        "type": "object",
+        "required": ["rut_autor", "comentario"],
+        "properties": {
+          "rut_autor":   { "type": "string", "example": "12345678-K" },
+          "comentario":  { "type": "string", "example": "Se revisó el equipo y se detectó falla en fuente de poder" }
+        }
+      },
+
+      "BitacoraResponse": {
+        "type": "object",
+        "properties": {
+          "id":              { "type": "integer", "example": 1 },
+          "id_ticket":       { "type": "integer", "example": 1 },
+          "rut_autor":       { "type": "string", "example": "12345678-K" },
+          "comentario":      { "type": "string", "example": "Se revisó el equipo y se detectó falla en fuente de poder" },
+          "fecha_registro":  { "type": "string", "format": "date-time", "example": "2026-03-21T21:30:00-03:00" }
+        }
+      },
+
+      "BitacoraSingleResponse": {
+        "type": "object",
+        "properties": {
+          "data":       { "$ref": "#/components/schemas/BitacoraResponse" },
+          "request_id": { "type": "string", "example": "abc123" }
+        }
+      },
+
+      "TrazabilidadResponse": {
+        "type": "object",
+        "properties": {
+          "id":                  { "type": "integer", "example": 1 },
+          "id_ticket":           { "type": "integer", "example": 1 },
+          "cod_estado_ticket":   { "type": "string", "example": "CRE" },
+          "descripcion_estado":  { "type": "string", "example": "CREADO" },
+          "rut_responsable":     { "type": "string", "example": "12345678-K" },
+          "fecha_trazabilidad":  { "type": "string", "format": "date-time" }
+        }
+      },
+
+      "TicketDetalleResponse": {
+        "type": "object",
+        "properties": {
+          "id":                      { "type": "integer", "example": 1 },
+          "nro_ticket":              { "type": "string", "example": "TK-384721-26" },
+          "id_solicitante":          { "type": "integer", "example": 1 },
+          "id_tecnico_asignado":     { "type": "integer", "nullable": true, "example": null },
+          "id_servicio":             { "type": "integer", "nullable": true, "example": 1 },
+          "id_tipo_ticket":          { "type": "integer", "example": 1 },
+          "cod_estado_ticket":       { "type": "string", "example": "CRE" },
+          "id_nivel_prioridad":      { "type": "integer", "nullable": true, "example": 1 },
+          "id_catalogo_falla":       { "type": "integer", "nullable": true, "example": null },
+          "id_departamento_soporte": { "type": "integer", "nullable": true, "example": 1 },
+          "critico":                 { "type": "boolean", "example": false },
+          "detalle_falla_reportada": { "type": "string", "example": "No enciende el equipo" },
+          "ubicacion_obs":           { "type": "string", "example": "SIN OBSERVACION" },
+          "created_at":              { "type": "string", "format": "date-time" },
+          "updated_at":              { "type": "string", "format": "date-time" },
+          "fecha_inicio_trabajo":    { "type": "string", "format": "date-time", "nullable": true },
+          "fecha_fin_trabajo":       { "type": "string", "format": "date-time", "nullable": true },
+          "trazabilidad": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TrazabilidadResponse" }
+          },
+          "bitacora": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/BitacoraResponse" }
+          }
+        }
+      },
+
+      "TicketDetalleSingleResponse": {
+        "type": "object",
+        "properties": {
+          "data":       { "$ref": "#/components/schemas/TicketDetalleResponse" },
+          "request_id": { "type": "string", "example": "abc123" }
+        }
+      },
+
+      "AssignTicketRequest": {
+        "type": "object",
+        "required": ["id_tecnico_asignado", "id_catalogo_falla", "id_nivel_prioridad"],
+        "properties": {
+          "id_tecnico_asignado": { "type": "integer", "minimum": 1, "example": 5 },
+          "id_catalogo_falla":   { "type": "integer", "minimum": 1, "example": 3 },
+          "id_nivel_prioridad":  { "type": "integer", "minimum": 1, "example": 2 }
+        }
+      },
+
+      "AssignTicketResponse": {
+        "type": "object",
+        "properties": {
+          "id":                    { "type": "integer", "example": 1 },
+          "nro_ticket":            { "type": "string", "example": "TK-384721-26" },
+          "cod_estado_ticket":     { "type": "string", "example": "ASI" },
+          "id_tecnico_asignado":   { "type": "integer", "example": 5 },
+          "id_catalogo_falla":     { "type": "integer", "example": 3 },
+          "id_nivel_prioridad":    { "type": "integer", "example": 2 }
+        }
+      },
+
+      "AssignTicketSingleResponse": {
+        "type": "object",
+        "properties": {
+          "data":       { "$ref": "#/components/schemas/AssignTicketResponse" },
+          "request_id": { "type": "string", "example": "abc123" }
+        }
+      },
+
+      "CreatePausaRequest": {
+        "type": "object",
+        "required": ["id_tecnico_pausa", "id_motivo_pausa"],
+        "properties": {
+          "id_tecnico_pausa": { "type": "integer", "minimum": 1, "example": 5 },
+          "id_motivo_pausa":  { "type": "integer", "minimum": 1, "example": 1 }
+        }
+      },
+
+      "PausaResponse": {
+        "type": "object",
+        "properties": {
+          "id":                 { "type": "integer", "example": 1 },
+          "id_ticket":          { "type": "integer", "example": 1 },
+          "id_tecnico_pausa":   { "type": "integer", "example": 5 },
+          "estado_pausa":       { "type": "string", "example": "APROBADA" },
+          "id_motivo_pausa":    { "type": "integer", "example": 1 },
+          "fecha_inicio_pausa": { "type": "string", "format": "date-time" }
+        }
+      },
+
+      "PausaSingleResponse": {
+        "type": "object",
+        "properties": {
+          "data":       { "$ref": "#/components/schemas/PausaResponse" },
+          "request_id": { "type": "string", "example": "abc123" }
+        }
+      },
+
+      "PausaDetalleResponse": {
+        "type": "object",
+        "properties": {
+          "id":                   { "type": "integer", "example": 1 },
+          "id_ticket":            { "type": "integer", "example": 1 },
+          "id_tecnico_pausa":     { "type": "integer", "example": 5 },
+          "estado_pausa":         { "type": "string", "example": "APROBADA" },
+          "id_motivo_pausa":      { "type": "integer", "example": 1 },
+          "fecha_inicio_pausa":   { "type": "string", "format": "date-time" },
+          "fecha_fin_pausa":      { "type": "string", "format": "date-time", "nullable": true },
+          "id_tecnico_autorizado": { "type": "integer", "nullable": true, "example": 3 },
+          "fecha_resolucion":     { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+
+      "PausaListResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/PausaDetalleResponse" } },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total":  { "type": "integer", "example": 8 },
+              "limit":  { "type": "integer", "example": 20 },
+              "offset": { "type": "integer", "example": 0 }
+            }
+          },
+          "request_id": { "type": "string", "example": "abc123" }
+        }
+      },
+
+      "ResolverPausaRequest": {
+        "type": "object",
+        "required": ["estado_pausa", "id_tecnico_autorizado"],
+        "properties": {
+          "estado_pausa":         { "type": "string", "enum": ["APROBADA", "RECHAZADA"], "example": "APROBADA" },
+          "id_tecnico_autorizado": { "type": "integer", "minimum": 1, "example": 3 }
+        }
+      },
+
+      "ReanudarTicketRequest": {
+        "type": "object",
+        "required": ["id_tecnico_pausa"],
+        "properties": {
+          "id_tecnico_pausa": { "type": "integer", "minimum": 1, "example": 5 }
+        }
+      },
+
+      "CancelTicketRequest": {
+        "type": "object",
+        "required": ["rut_responsable"],
+        "properties": {
+          "rut_responsable": { "type": "string", "example": "12345678-9" }
+        }
+      },
+
+      "VistoTecnicoRequest": {
+        "type": "object",
+        "required": ["rut_responsable"],
+        "properties": {
+          "rut_responsable": { "type": "string", "example": "11111111-1" }
+        }
+      },
+
+      "UpdateTicketRequest": {
+        "type": "object",
+        "properties": {
+          "detalle_falla_reportada": { "type": "string", "example": "La impresora no enciende" },
+          "ubicacion_obs":           { "type": "string", "example": "Piso 3 Sala 5" },
+          "critico":                 { "type": "boolean", "example": true },
+          "id_tipo_ticket":          { "type": "integer", "example": 1 },
+          "id_departamento_soporte": { "type": "integer", "example": 2 },
+          "id_servicio":             { "type": "integer", "example": 1 }
+        }
+      },
+
+      "TicketResponse": {
+        "type": "object",
+        "properties": {
+          "id":                      { "type": "integer", "example": 1 },
+          "nro_ticket":              { "type": "string", "example": "TK-384721-26" },
+          "id_solicitante":          { "type": "integer", "example": 1 },
+          "id_tecnico_asignado":     { "type": "integer", "nullable": true },
+          "id_servicio":             { "type": "integer", "nullable": true },
+          "id_tipo_ticket":          { "type": "integer", "example": 1 },
+          "cod_estado_ticket":       { "type": "string", "example": "CRE" },
+          "id_nivel_prioridad":      { "type": "integer", "nullable": true },
+          "id_catalogo_falla":       { "type": "integer", "nullable": true },
+          "id_departamento_soporte": { "type": "integer", "nullable": true },
+          "critico":                 { "type": "boolean", "example": false },
+          "detalle_falla_reportada": { "type": "string" },
+          "ubicacion_obs":           { "type": "string" },
+          "created_at":              { "type": "string", "format": "date-time" },
+          "updated_at":              { "type": "string", "format": "date-time" },
+          "fecha_inicio_trabajo":    { "type": "string", "format": "date-time", "nullable": true },
+          "fecha_fin_trabajo":       { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+
+      "TicketSingleResponse": {
+        "type": "object",
+        "properties": {
+          "data":       { "$ref": "#/components/schemas/TicketResponse" },
+          "request_id": { "type": "string" }
+        }
+      },
+
+      "TicketListResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/TicketResponse" } },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total":  { "type": "integer" },
+              "limit":  { "type": "integer" },
+              "offset": { "type": "integer" }
+            }
+          },
+          "request_id": { "type": "string" }
+        }
+      },
+
+      "BitacoraResponse": {
+        "type": "object",
+        "properties": {
+          "id":             { "type": "integer", "example": 1 },
+          "id_ticket":      { "type": "integer", "example": 5 },
+          "rut_autor":      { "type": "string", "example": "12345678-9" },
+          "comentario":     { "type": "string", "example": "Se revisó el equipo" },
+          "fecha_registro": { "type": "string", "format": "date-time" }
+        }
+      },
+
+      "CreateTraspasoRequest": {
+        "type": "object",
+        "required": ["id_tecnico_origen", "id_tecnico_destino", "motivo"],
+        "properties": {
+          "id_tecnico_origen":  { "type": "integer", "minimum": 1, "example": 5 },
+          "id_tecnico_destino": { "type": "integer", "minimum": 1, "example": 8 },
+          "motivo":             { "type": "string", "example": "No tengo experiencia en redes" }
+        }
+      },
+
+      "ResolverTraspasoRequest": {
+        "type": "object",
+        "required": ["estado_traspaso"],
+        "properties": {
+          "estado_traspaso":       { "type": "string", "enum": ["ACEPTADO", "RECHAZADO"], "example": "ACEPTADO" },
+          "comentario_resolucion": { "type": "string", "example": "Sin problema, lo tomo yo" }
+        }
+      },
+
+      "TraspasoResponse": {
+        "type": "object",
+        "properties": {
+          "id":                    { "type": "integer", "example": 1 },
+          "id_ticket":             { "type": "integer", "example": 5 },
+          "id_tecnico_origen":     { "type": "integer", "example": 5 },
+          "id_tecnico_destino":    { "type": "integer", "example": 8 },
+          "estado_traspaso":       { "type": "string", "example": "PENDIENTE" },
+          "motivo":                { "type": "string", "example": "No tengo experiencia en redes" },
+          "comentario_resolucion": { "type": "string", "example": "Sin problema" },
+          "fecha_solicitud":       { "type": "string", "format": "date-time" },
+          "fecha_resolucion":      { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+
+      "TraspasoSingleResponse": {
+        "type": "object",
+        "properties": {
+          "data":       { "$ref": "#/components/schemas/TraspasoResponse" },
+          "request_id": { "type": "string", "example": "abc123" }
+        }
+      },
+
+      "TraspasoListResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/TraspasoResponse" } },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total":  { "type": "integer", "example": 3 },
+              "limit":  { "type": "integer", "example": 20 },
+              "offset": { "type": "integer", "example": 0 }
+            }
+          },
+          "request_id": { "type": "string", "example": "abc123" }
         }
       },
 

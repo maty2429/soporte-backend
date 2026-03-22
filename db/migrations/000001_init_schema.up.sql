@@ -82,6 +82,7 @@ CREATE TABLE servicio
     piso                       INTEGER DEFAULT 0,
     servicios                  TEXT    DEFAULT 'SIN ESPECIFICAR',
     ubicacion                  TEXT    DEFAULT 'SIN ESPECIFICAR',
+    unidades                   TEXT    DEFAULT 'SIN ESPECIFICAR',
     id_nivel_prioridad_default INTEGER DEFAULT 1 REFERENCES niveles_prioridad (id)
 );
 
