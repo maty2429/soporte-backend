@@ -11,7 +11,10 @@
   "tags": [
     { "name": "health",       "description": "Probes de salud e infraestructura" },
     { "name": "solicitantes", "description": "Solicitantes del sistema de soporte" },
+    { "name": "tecnicos",     "description": "Técnicos y configuración de horarios" },
     { "name": "tickets",      "description": "Tickets de soporte" },
+    { "name": "servicios",    "description": "Servicios del hospital" },
+    { "name": "catalogo-fallas", "description": "Catálogo de fallas" },
     { "name": "catalogos",    "description": "Catálogos del sistema (dropdowns)" }
   ],
   "paths": {
@@ -226,6 +229,247 @@
       }
     },
 
+    "/api/v1/tecnicos": {
+      "get": {
+        "tags": ["tecnicos"],
+        "summary": "Listar técnicos",
+        "parameters": [
+          { "in": "query", "name": "search", "schema": { "type": "string" }, "description": "Buscar por nombre o rut" },
+          { "in": "query", "name": "id_tipo_tecnico", "schema": { "type": "integer" } },
+          { "in": "query", "name": "id_departamento_soporte", "schema": { "type": "integer" } },
+          { "in": "query", "name": "estado", "schema": { "type": "boolean" } },
+          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 20 } },
+          { "in": "query", "name": "offset", "schema": { "type": "integer", "default": 0 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de técnicos",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TecnicoListResponse" } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["tecnicos"],
+        "summary": "Crear técnico",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateTecnicoRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Técnico creado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TecnicoSingleResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+
+    "/api/v1/tecnicos/{id}": {
+      "get": {
+        "tags": ["tecnicos"],
+        "summary": "Obtener técnico por ID",
+        "parameters": [ { "$ref": "#/components/parameters/IDParam" } ],
+        "responses": {
+          "200": {
+            "description": "Técnico encontrado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TecnicoSingleResponse" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["tecnicos"],
+        "summary": "Actualizar técnico",
+        "parameters": [ { "$ref": "#/components/parameters/IDParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateTecnicoRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Técnico actualizado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TecnicoSingleResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+
+    "/api/v1/tecnicos/rut/{rut}": {
+      "get": {
+        "tags": ["tecnicos"],
+        "summary": "Obtener técnico por RUT",
+        "parameters": [
+          { "in": "path", "name": "rut", "required": true, "schema": { "type": "string" }, "example": "12345678-9" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Técnico encontrado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TecnicoSingleResponse" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+
+    "/api/v1/configuracion-horarios-turno": {
+      "get": {
+        "tags": ["tecnicos"],
+        "summary": "Listar configuración de horarios de turno",
+        "responses": {
+          "200": {
+            "description": "Listado de horarios",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/HorarioTurnoResponse" } } } } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["tecnicos"],
+        "summary": "Crear horario de turno",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateHorarioTurnoRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Horario creado",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/HorarioTurnoResponse" } } } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+
+    "/api/v1/configuracion-horarios-turno/{id}": {
+      "patch": {
+        "tags": ["tecnicos"],
+        "summary": "Actualizar horario de turno",
+        "parameters": [ { "$ref": "#/components/parameters/IDParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateHorarioTurnoRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Horario actualizado",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/HorarioTurnoResponse" } } } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+
+    "/api/v1/servicios": {
+      "get": {
+        "tags": ["servicios"],
+        "summary": "Listar servicios",
+        "description": "Filtros en cascada: edificio → piso → servicios → unidades",
+        "parameters": [
+          { "in": "query", "name": "edificio", "schema": { "type": "string" }, "description": "Filtrar por edificio" },
+          { "in": "query", "name": "piso", "schema": { "type": "integer" }, "description": "Filtrar por piso" },
+          { "in": "query", "name": "servicios", "schema": { "type": "string" }, "description": "Filtrar por servicio" },
+          { "in": "query", "name": "search", "schema": { "type": "string" }, "description": "Buscar en unidades y ubicación" },
+          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 50 } },
+          { "in": "query", "name": "offset", "schema": { "type": "integer", "default": 0 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de servicios",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServicioListResponse" } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["servicios"],
+        "summary": "Crear servicio",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateServicioRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Servicio creado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServicioSingleResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+
+    "/api/v1/servicios/{id}": {
+      "patch": {
+        "tags": ["servicios"],
+        "summary": "Actualizar servicio",
+        "parameters": [ { "$ref": "#/components/parameters/IDParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateServicioRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Servicio actualizado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServicioSingleResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+
+    "/api/v1/catalogo-fallas": {
+      "get": {
+        "tags": ["catalogo-fallas"],
+        "summary": "Listar catálogo de fallas",
+        "responses": {
+          "200": {
+            "description": "Listado de fallas",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/CatalogoFallaResponse" } } } } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["catalogo-fallas"],
+        "summary": "Crear falla en catálogo",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCatalogoFallaRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Falla creada",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/CatalogoFallaResponse" } } } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+
+    "/api/v1/catalogo-fallas/{id}": {
+      "patch": {
+        "tags": ["catalogo-fallas"],
+        "summary": "Actualizar falla en catálogo",
+        "parameters": [ { "$ref": "#/components/parameters/IDParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCatalogoFallaRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Falla actualizada",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/CatalogoFallaResponse" } } } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+
     "/api/v1/tickets": {
       "get": {
         "tags": ["tickets"],
@@ -365,80 +609,6 @@
       }
     },
 
-    "/api/v1/tickets/{id}/visto": {
-      "patch": {
-        "tags": ["tickets"],
-        "summary": "Marcar ticket como visto por técnico",
-        "description": "Cambia el estado de ASI a VITEC. Solo funciona si el ticket está en estado ASIGNADO.",
-        "parameters": [
-          { "$ref": "#/components/parameters/IDParam" }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/VistoTecnicoRequest" }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Ticket marcado como visto",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": { "type": "string", "example": "ticket marcado como visto por técnico" }
-                  }
-                }
-              }
-            }
-          },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "500": { "$ref": "#/components/responses/InternalError" }
-        }
-      }
-    },
-
-    "/api/v1/tickets/{id}/cancelar": {
-      "patch": {
-        "tags": ["tickets"],
-        "summary": "Cancelar ticket",
-        "description": "Cancela el ticket desde cualquier estado (excepto ya cancelado o cerrado). Cambia a CAN y registra trazabilidad.",
-        "parameters": [
-          { "$ref": "#/components/parameters/IDParam" }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/CancelTicketRequest" }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Ticket cancelado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": { "type": "string", "example": "ticket cancelado correctamente" }
-                  }
-                }
-              }
-            }
-          },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "500": { "$ref": "#/components/responses/InternalError" }
-        }
-      }
-    },
-
     "/api/v1/tickets/{id}/cerrar": {
       "patch": {
         "tags": ["tickets"],
@@ -480,7 +650,7 @@
       "patch": {
         "tags": ["tickets"],
         "summary": "Cambiar estado del ticket",
-        "description": "Cambia el estado del ticket y registra el cambio en trazabilidad.",
+        "description": "Cambia el estado del ticket y registra trazabilidad. Solo permite: VITEC (desde ASI), PRO (desde VITEC), CAN (desde cualquiera excepto CAN/CER), TER (desde PRO). Para cerrar use /cerrar.",
         "parameters": [
           { "$ref": "#/components/parameters/IDParam" }
         ],
@@ -1564,22 +1734,6 @@
         }
       },
 
-      "CancelTicketRequest": {
-        "type": "object",
-        "required": ["rut_responsable"],
-        "properties": {
-          "rut_responsable": { "type": "string", "example": "12345678-9" }
-        }
-      },
-
-      "VistoTecnicoRequest": {
-        "type": "object",
-        "required": ["rut_responsable"],
-        "properties": {
-          "rut_responsable": { "type": "string", "example": "11111111-1" }
-        }
-      },
-
       "UpdateTicketRequest": {
         "type": "object",
         "properties": {
@@ -1639,17 +1793,6 @@
         }
       },
 
-      "BitacoraResponse": {
-        "type": "object",
-        "properties": {
-          "id":             { "type": "integer", "example": 1 },
-          "id_ticket":      { "type": "integer", "example": 5 },
-          "rut_autor":      { "type": "string", "example": "12345678-9" },
-          "comentario":     { "type": "string", "example": "Se revisó el equipo" },
-          "fecha_registro": { "type": "string", "format": "date-time" }
-        }
-      },
-
       "CreateTraspasoRequest": {
         "type": "object",
         "required": ["id_tecnico_origen", "id_tecnico_destino", "motivo"],
@@ -1705,6 +1848,193 @@
             }
           },
           "request_id": { "type": "string", "example": "abc123" }
+        }
+      },
+
+      "TecnicoResponse": {
+        "type": "object",
+        "properties": {
+          "id":                      { "type": "integer", "example": 1 },
+          "rut":                     { "type": "string", "example": "12345678" },
+          "dv":                      { "type": "string", "example": "9" },
+          "nombre_completo":         { "type": "string", "example": "JUAN PEREZ" },
+          "id_tipo_tecnico":         { "type": "integer", "nullable": true, "example": 1 },
+          "id_departamento_soporte": { "type": "integer", "nullable": true, "example": 2 },
+          "id_tipo_turno":           { "type": "integer", "nullable": true, "example": 1 },
+          "estado":                  { "type": "boolean", "example": true },
+          "created_at":              { "type": "string", "format": "date-time" },
+          "updated_at":              { "type": "string", "format": "date-time" }
+        }
+      },
+
+      "TecnicoSingleResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/TecnicoResponse" },
+          "request_id": { "type": "string" }
+        }
+      },
+
+      "TecnicoListResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/TecnicoResponse" } },
+          "meta": { "type": "object", "properties": { "total": { "type": "integer" }, "limit": { "type": "integer" }, "offset": { "type": "integer" } } },
+          "request_id": { "type": "string" }
+        }
+      },
+
+      "CreateTecnicoRequest": {
+        "type": "object",
+        "required": ["rut", "dv", "nombre_completo"],
+        "properties": {
+          "rut":                     { "type": "string", "example": "12345678" },
+          "dv":                      { "type": "string", "example": "9" },
+          "nombre_completo":         { "type": "string", "example": "JUAN PEREZ" },
+          "id_tipo_tecnico":         { "type": "integer", "example": 1 },
+          "id_departamento_soporte": { "type": "integer", "example": 2 },
+          "id_tipo_turno":           { "type": "integer", "example": 1 },
+          "estado":                  { "type": "boolean", "example": true }
+        }
+      },
+
+      "UpdateTecnicoRequest": {
+        "type": "object",
+        "properties": {
+          "rut":                     { "type": "string" },
+          "dv":                      { "type": "string" },
+          "nombre_completo":         { "type": "string" },
+          "id_tipo_tecnico":         { "type": "integer" },
+          "id_departamento_soporte": { "type": "integer" },
+          "id_tipo_turno":           { "type": "integer" },
+          "estado":                  { "type": "boolean" }
+        }
+      },
+
+      "HorarioTurnoResponse": {
+        "type": "object",
+        "properties": {
+          "id":             { "type": "integer", "example": 1 },
+          "id_tipo_turno":  { "type": "integer", "example": 1 },
+          "dia_semana":     { "type": "integer", "example": 1 },
+          "hora_inicio":    { "type": "string", "example": "08:00" },
+          "hora_fin":       { "type": "string", "example": "16:00" }
+        }
+      },
+
+      "CreateHorarioTurnoRequest": {
+        "type": "object",
+        "required": ["id_tipo_turno", "dia_semana", "hora_inicio", "hora_fin"],
+        "properties": {
+          "id_tipo_turno":  { "type": "integer", "minimum": 1, "example": 1 },
+          "dia_semana":     { "type": "integer", "minimum": 0, "maximum": 6, "example": 1 },
+          "hora_inicio":    { "type": "string", "example": "08:00" },
+          "hora_fin":       { "type": "string", "example": "16:00" }
+        }
+      },
+
+      "UpdateHorarioTurnoRequest": {
+        "type": "object",
+        "properties": {
+          "id_tipo_turno":  { "type": "integer", "minimum": 1 },
+          "dia_semana":     { "type": "integer", "minimum": 0, "maximum": 6 },
+          "hora_inicio":    { "type": "string" },
+          "hora_fin":       { "type": "string" }
+        }
+      },
+
+      "ServicioResponse": {
+        "type": "object",
+        "properties": {
+          "id":                         { "type": "integer", "example": 1 },
+          "edificio":                   { "type": "string", "example": "EDIFICIO A" },
+          "piso":                       { "type": "integer", "example": 3 },
+          "servicios":                  { "type": "string", "example": "URGENCIA" },
+          "ubicacion":                  { "type": "string", "example": "ALA NORTE" },
+          "unidades":                   { "type": "string", "example": "UNIDAD CARDIOLOGIA" },
+          "id_nivel_prioridad_default": { "type": "integer", "nullable": true, "example": 1 }
+        }
+      },
+
+      "ServicioSingleResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/ServicioResponse" },
+          "request_id": { "type": "string" }
+        }
+      },
+
+      "ServicioListResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/ServicioResponse" } },
+          "meta": { "type": "object", "properties": { "total": { "type": "integer" }, "limit": { "type": "integer" }, "offset": { "type": "integer" } } },
+          "request_id": { "type": "string" }
+        }
+      },
+
+      "CreateServicioRequest": {
+        "type": "object",
+        "properties": {
+          "edificio":                   { "type": "string", "example": "EDIFICIO A" },
+          "piso":                       { "type": "integer", "example": 3 },
+          "servicios":                  { "type": "string", "example": "URGENCIA" },
+          "ubicacion":                  { "type": "string", "example": "ALA NORTE" },
+          "unidades":                   { "type": "string", "example": "UNIDAD CARDIOLOGIA" },
+          "id_nivel_prioridad_default": { "type": "integer", "example": 1 }
+        }
+      },
+
+      "UpdateServicioRequest": {
+        "type": "object",
+        "properties": {
+          "edificio":                   { "type": "string" },
+          "piso":                       { "type": "integer" },
+          "servicios":                  { "type": "string" },
+          "ubicacion":                  { "type": "string" },
+          "unidades":                   { "type": "string" },
+          "id_nivel_prioridad_default": { "type": "integer" }
+        }
+      },
+
+      "CatalogoFallaResponse": {
+        "type": "object",
+        "properties": {
+          "id":                     { "type": "integer", "example": 1 },
+          "codigo_falla":           { "type": "string", "example": "F-001" },
+          "descripcion_falla":      { "type": "string", "example": "Falla en monitor" },
+          "complejidad":            { "type": "integer", "example": 3 },
+          "requiere_visita_fisica": { "type": "boolean", "example": true },
+          "id_departamento":        { "type": "integer", "nullable": true, "example": 1 },
+          "categoria":              { "type": "string", "nullable": true, "example": "HARDWARE" },
+          "subcategoria":           { "type": "string", "nullable": true, "example": "MONITOR" }
+        }
+      },
+
+      "CreateCatalogoFallaRequest": {
+        "type": "object",
+        "required": ["codigo_falla", "descripcion_falla"],
+        "properties": {
+          "codigo_falla":           { "type": "string", "example": "F-001" },
+          "descripcion_falla":      { "type": "string", "example": "Falla en monitor" },
+          "complejidad":            { "type": "integer", "minimum": 1, "maximum": 10, "example": 3 },
+          "requiere_visita_fisica": { "type": "boolean", "example": true },
+          "id_departamento":        { "type": "integer", "example": 1 },
+          "categoria":              { "type": "string", "example": "HARDWARE" },
+          "subcategoria":           { "type": "string", "example": "MONITOR" }
+        }
+      },
+
+      "UpdateCatalogoFallaRequest": {
+        "type": "object",
+        "properties": {
+          "codigo_falla":           { "type": "string" },
+          "descripcion_falla":      { "type": "string" },
+          "complejidad":            { "type": "integer", "minimum": 1, "maximum": 10 },
+          "requiere_visita_fisica": { "type": "boolean" },
+          "id_departamento":        { "type": "integer" },
+          "categoria":              { "type": "string" },
+          "subcategoria":           { "type": "string" }
         }
       },
 
