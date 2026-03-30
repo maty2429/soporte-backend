@@ -72,15 +72,16 @@ type CreateTraspasoCommand struct {
 
 type ResolverTraspasoCommand struct {
 	IDTraspaso           int
+	IDTecnicoDestino     int
 	EstadoTraspaso       string // ACEPTADO o RECHAZADO
 	ComentarioResolucion string
 }
 
 type ListTraspasosQuery struct {
-	IDTicket int
-	Estado   string
-	Limit    int
-	Offset   int
+	IDTecnicoDestino int
+	Estado           string
+	Limit            int
+	Offset           int
 }
 
 type ListTraspasosResult struct {
@@ -103,6 +104,7 @@ type UpdateTicketCommand struct {
 type ListTicketsQuery struct {
 	CodEstadoTicket       string
 	IDTecnicoAsignado     int
+	RutTecnico            string
 	IDSolicitante         int
 	IDDepartamentoSoporte int
 	Critico               *bool

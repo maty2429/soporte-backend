@@ -3,11 +3,11 @@ package domain
 import "time"
 
 type ConfiguracionHorarioTurno struct {
-	ID           int
-	IDTipoTurno  int
-	DiaSemana    int
-	HoraInicio   string
-	HoraFin      string
+	ID          int
+	IDTipoTurno int
+	DiaSemana   int
+	HoraInicio  string
+	HoraFin     string
 }
 
 type Tecnico struct {
@@ -21,4 +21,5 @@ type Tecnico struct {
 	Estado                bool
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
+	DepartamentoSoporte   *DepartamentoSoporte
 }

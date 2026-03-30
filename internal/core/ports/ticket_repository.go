@@ -14,15 +14,17 @@ type ListPausasFilters struct {
 }
 
 type ListTraspasosFilters struct {
-	IDTicket int
-	Estado   string // PENDIENTE, ACEPTADO, RECHAZADO — vacío = todos
-	Limit    int
-	Offset   int
+	IDTecnicoDestino int
+	Estado           string // PENDIENTE, ACEPTADO, RECHAZADO — vacío = todos
+	Limit            int
+	Offset           int
 }
 
 type ListTicketsFilters struct {
 	CodEstadoTicket       string
 	IDTecnicoAsignado     int
+	RutTecnico            string
+	DVTecnico             string
 	IDSolicitante         int
 	IDDepartamentoSoporte int
 	Critico               *bool

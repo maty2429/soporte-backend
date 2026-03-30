@@ -70,23 +70,7 @@ func (r *TicketRepository) UpdateFields(ctx context.Context, ticket *domain.Tick
 }
 
 func (r *TicketRepository) ListTickets(ctx context.Context, f ports.ListTicketsFilters) ([]domain.Ticket, int64, error) {
-	q := r.db.WithContext(ctx).Model(&dbmodels.Ticket{})
-
-	if f.CodEstadoTicket != "" {
-		q = q.Where("cod_estado_ticket = ?", f.CodEstadoTicket)
-	}
-	if f.IDTecnicoAsignado > 0 {
-		q = q.Where("id_tecnico_asignado = ?", f.IDTecnicoAsignado)
-	}
-	if f.IDSolicitante > 0 {
-		q = q.Where("id_solicitante = ?", f.IDSolicitante)
-	}
-	if f.IDDepartamentoSoporte > 0 {
-		q = q.Where("id_departamento_soporte = ?", f.IDDepartamentoSoporte)
-	}
-	if f.Critico != nil {
-		q = q.Where("critico = ?", *f.Critico)
-	}
+	q := applyListTicketsFilters(r.db.WithContext(ctx).Model(&dbmodels.Ticket{}), f)
 
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
@@ -94,7 +78,8 @@ func (r *TicketRepository) ListTickets(ctx context.Context, f ports.ListTicketsF
 	}
 
 	var rows []dbmodels.Ticket
-	if err := q.Order("created_at DESC").Offset(f.Offset).Limit(f.Limit).Find(&rows).Error; err != nil {
+	dataQuery := preloadTicketRelations(applyListTicketsFilters(r.db.WithContext(ctx).Model(&dbmodels.Ticket{}), f))
+	if err := dataQuery.Order("ticket.created_at DESC").Offset(f.Offset).Limit(f.Limit).Find(&rows).Error; err != nil {
 		return nil, 0, wrapListError("tickets", err)
 	}
 
@@ -107,7 +92,7 @@ func (r *TicketRepository) ListTickets(ctx context.Context, f ports.ListTicketsF
 
 func (r *TicketRepository) GetByID(ctx context.Context, id int) (domain.Ticket, error) {
 	var row dbmodels.Ticket
-	if err := r.db.WithContext(ctx).Where("id = ?", id).Take(&row).Error; err != nil {
+	if err := preloadTicketRelations(r.db.WithContext(ctx)).Where("id = ?", id).Take(&row).Error; err != nil {
 		return domain.Ticket{}, wrapDBError("ticket", err)
 	}
 	return toTicketDomain(row), nil
@@ -115,7 +100,7 @@ func (r *TicketRepository) GetByID(ctx context.Context, id int) (domain.Ticket, 
 
 func (r *TicketRepository) GetByNroTicket(ctx context.Context, nro string) (domain.Ticket, error) {
 	var row dbmodels.Ticket
-	if err := r.db.WithContext(ctx).Where("nro_ticket = ?", nro).Take(&row).Error; err != nil {
+	if err := preloadTicketRelations(r.db.WithContext(ctx)).Where("nro_ticket = ?", nro).Take(&row).Error; err != nil {
 		return domain.Ticket{}, wrapDBError("ticket", err)
 	}
 	return toTicketDomain(row), nil
@@ -158,12 +143,12 @@ func (r *TicketRepository) CreateTrazabilidad(ctx context.Context, t *domain.Tra
 
 func (r *TicketRepository) ListTrazabilidad(ctx context.Context, idTicket int) ([]domain.TrazabilidadTicket, error) {
 	type trazRow struct {
-		ID                 int
-		IDTicket           int
-		CodEstadoTicket    string
-		DescripcionEstado  string
-		RutResponsable     string
-		FechaTrazabilidad  time.Time
+		ID                int
+		IDTicket          int
+		CodEstadoTicket   string
+		DescripcionEstado string
+		RutResponsable    string
+		FechaTrazabilidad time.Time
 	}
 
 	var rows []trazRow
@@ -359,7 +344,7 @@ func (r *TicketRepository) GetTraspasoByID(ctx context.Context, id int) (domain.
 func (r *TicketRepository) GetTraspasoPendiente(ctx context.Context, idTicket int) (domain.TicketTraspaso, error) {
 	var row dbmodels.TicketTraspaso
 	if err := r.db.WithContext(ctx).
-		Where("id_ticket = ? AND estado_traspaso = ?", idTicket, "PENDIENTE").
+		Where("id_ticket = ? AND cod_traslado = ?", idTicket, "PENDIENTE").
 		Take(&row).Error; err != nil {
 		return domain.TicketTraspaso{}, wrapDBError("ticket traspaso", err)
 	}
@@ -368,13 +353,13 @@ func (r *TicketRepository) GetTraspasoPendiente(ctx context.Context, idTicket in
 
 func (r *TicketRepository) UpdateTraspaso(ctx context.Context, t *domain.TicketTraspaso) error {
 	updates := map[string]any{
-		"estado_traspaso": t.EstadoTraspaso,
+		"cod_traslado": t.EstadoTraspaso,
 	}
 	if t.ComentarioResolucion != "" {
-		updates["comentario_resolucion"] = t.ComentarioResolucion
+		updates["motivo_respuesta"] = t.ComentarioResolucion
 	}
 	if t.FechaResolucion != nil {
-		updates["fecha_resolucion"] = *t.FechaResolucion
+		updates["fecha_respuesta"] = *t.FechaResolucion
 	}
 	if err := r.db.WithContext(ctx).Model(&dbmodels.TicketTraspaso{}).Where("id = ?", t.ID).Updates(updates).Error; err != nil {
 		return wrapUpdateError("ticket traspaso", err)
@@ -383,10 +368,10 @@ func (r *TicketRepository) UpdateTraspaso(ctx context.Context, t *domain.TicketT
 }
 
 func (r *TicketRepository) ListTraspasos(ctx context.Context, f ports.ListTraspasosFilters) ([]domain.TicketTraspaso, int64, error) {
-	q := r.db.WithContext(ctx).Model(&dbmodels.TicketTraspaso{}).Where("id_ticket = ?", f.IDTicket)
+	q := r.db.WithContext(ctx).Model(&dbmodels.TicketTraspaso{}).Where("id_tecnico_destino = ?", f.IDTecnicoDestino)
 
 	if f.Estado != "" {
-		q = q.Where("estado_traspaso = ?", f.Estado)
+		q = q.Where("cod_traslado = ?", f.Estado)
 	}
 
 	var total int64
@@ -458,5 +443,115 @@ func toTicketDomain(row dbmodels.Ticket) domain.Ticket {
 		UpdatedAt:             row.UpdatedAt,
 		FechaInicioTrabajo:    row.FechaInicioTrabajo,
 		FechaFinTrabajo:       row.FechaFinTrabajo,
+		Solicitante:           toSolicitantePtr(row.Solicitante),
+		TecnicoAsignado:       toTecnicoPtr(row.TecnicoAsignado),
+		Servicio:              toServicioPtr(row.Servicio),
+		TipoTicket:            toTipoTicketPtr(row.TipoTicket),
+		EstadoTicket:          toEstadoTicketPtr(row.EstadoTicket),
+		NivelPrioridad:        toNivelPrioridadPtr(row.NivelPrioridad),
+		CatalogoFalla:         toCatalogoFallaPtr(row.CatalogoFalla),
+		DepartamentoSoporte:   toDepartamentoSoportePtr(row.DepartamentoSoporte),
+	}
+}
+
+func applyListTicketsFilters(q *gorm.DB, f ports.ListTicketsFilters) *gorm.DB {
+	if f.CodEstadoTicket != "" {
+		q = q.Where("cod_estado_ticket = ?", f.CodEstadoTicket)
+	}
+	if f.IDTecnicoAsignado > 0 {
+		q = q.Where("id_tecnico_asignado = ?", f.IDTecnicoAsignado)
+	}
+	if f.RutTecnico != "" && f.DVTecnico != "" {
+		q = q.Joins("JOIN tecnicos ON tecnicos.id = id_tecnico_asignado").
+			Where("tecnicos.rut = ? AND tecnicos.dv = ?", f.RutTecnico, f.DVTecnico)
+	}
+	if f.IDSolicitante > 0 {
+		q = q.Where("id_solicitante = ?", f.IDSolicitante)
+	}
+	if f.IDDepartamentoSoporte > 0 {
+		q = q.Where("id_departamento_soporte = ?", f.IDDepartamentoSoporte)
+	}
+	if f.Critico != nil {
+		q = q.Where("critico = ?", *f.Critico)
+	}
+	return q
+}
+
+func preloadTicketRelations(q *gorm.DB) *gorm.DB {
+	return q.
+		Preload("Solicitante").
+		Preload("TecnicoAsignado").
+		Preload("Servicio").
+		Preload("TipoTicket").
+		Preload("EstadoTicket").
+		Preload("NivelPrioridad").
+		Preload("CatalogoFalla").
+		Preload("DepartamentoSoporte")
+}
+
+func toSolicitantePtr(row *dbmodels.Solicitante) *domain.Solicitante {
+	if row == nil {
+		return nil
+	}
+	item := toSolicitanteDomain(*row)
+	return &item
+}
+
+func toTecnicoPtr(row *dbmodels.Tecnico) *domain.Tecnico {
+	if row == nil {
+		return nil
+	}
+	item := toTecnicoDomain(*row)
+	return &item
+}
+
+func toTipoTicketPtr(row *dbmodels.TipoTicket) *domain.TipoTicket {
+	if row == nil {
+		return nil
+	}
+	return &domain.TipoTicket{
+		ID:            row.ID,
+		CodTipoTicket: row.CodTipoTicket,
+		Descripcion:   row.Descripcion,
+	}
+}
+
+func toEstadoTicketPtr(row *dbmodels.EstadoTicket) *domain.EstadoTicket {
+	if row == nil {
+		return nil
+	}
+	return &domain.EstadoTicket{
+		ID:              row.ID,
+		Descripcion:     row.Descripcion,
+		CodEstadoTicket: row.CodEstadoTicket,
+	}
+}
+
+func toNivelPrioridadPtr(row *dbmodels.NivelPrioridad) *domain.NivelPrioridad {
+	if row == nil {
+		return nil
+	}
+	return &domain.NivelPrioridad{
+		ID:          row.ID,
+		Descripcion: row.Descripcion,
+	}
+}
+
+func toCatalogoFallaPtr(row *dbmodels.CatalogoFalla) *domain.CatalogoFalla {
+	if row == nil {
+		return nil
+	}
+	item := toCatalogoFallaDomain(*row)
+	return &item
+}
+
+func toDepartamentoSoportePtr(row *dbmodels.DepartamentoSoporte) *domain.DepartamentoSoporte {
+	if row == nil {
+		return nil
+	}
+	return &domain.DepartamentoSoporte{
+		ID:              row.ID,
+		CodDepartamento: row.CodDepartamento,
+		Descripcion:     row.Descripcion,
 	}
 }

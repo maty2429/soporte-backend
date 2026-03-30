@@ -310,3 +310,60 @@ func TestListTecnicosWithFilters(t *testing.T) {
 		t.Errorf("total search = %d, want 1", result.Total)
 	}
 }
+
+func TestListTecnicosByDepartamentoSoporteIncludesRelation(t *testing.T) {
+	t.Parallel()
+	svc, db := setupTecnicoService(t)
+	ctx := context.Background()
+
+	if err := db.Create(&dbmodels.DepartamentoSoporte{
+		ID:              1,
+		CodDepartamento: "TI",
+		Descripcion:     "TECNOLOGIA",
+	}).Error; err != nil {
+		t.Fatalf("create departamento 1: %v", err)
+	}
+	if err := db.Create(&dbmodels.DepartamentoSoporte{
+		ID:              2,
+		CodDepartamento: "RED",
+		Descripcion:     "REDES",
+	}).Error; err != nil {
+		t.Fatalf("create departamento 2: %v", err)
+	}
+
+	deptoTI := 1
+	deptoRed := 2
+	if _, err := svc.Create(ctx, services.CreateTecnicoCommand{
+		Rut:                   "12121212",
+		Dv:                    "1",
+		NombreCompleto:        "TECNICO TI",
+		IDDepartamentoSoporte: &deptoTI,
+	}); err != nil {
+		t.Fatalf("create tecnico TI: %v", err)
+	}
+	if _, err := svc.Create(ctx, services.CreateTecnicoCommand{
+		Rut:                   "13131313",
+		Dv:                    "3",
+		NombreCompleto:        "TECNICO RED",
+		IDDepartamentoSoporte: &deptoRed,
+	}); err != nil {
+		t.Fatalf("create tecnico RED: %v", err)
+	}
+
+	result, err := svc.List(ctx, services.ListTecnicosQuery{IDDepartamentoSoporte: 1})
+	if err != nil {
+		t.Fatalf("list by departamento soporte: %v", err)
+	}
+	if result.Total != 1 {
+		t.Fatalf("total = %d, want 1", result.Total)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("len(items) = %d, want 1", len(result.Items))
+	}
+	if result.Items[0].IDDepartamentoSoporte == nil || *result.Items[0].IDDepartamentoSoporte != 1 {
+		t.Fatalf("id_departamento_soporte = %#v, want 1", result.Items[0].IDDepartamentoSoporte)
+	}
+	if result.Items[0].DepartamentoSoporte == nil || result.Items[0].DepartamentoSoporte.CodDepartamento != "TI" {
+		t.Fatalf("departamento_soporte = %#v, want cod TI", result.Items[0].DepartamentoSoporte)
+	}
+}

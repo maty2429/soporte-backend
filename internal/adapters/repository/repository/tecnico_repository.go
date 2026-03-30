@@ -33,7 +33,7 @@ func (r *TecnicoRepository) List(ctx context.Context, f ports.ListTecnicosFilter
 		q = q.Where("id_tipo_tecnico = ?", f.IDTipoTecnico)
 	}
 	if f.IDDepartamentoSoporte > 0 {
-		q = q.Where("id_departamento_soporte = ?", f.IDDepartamentoSoporte)
+		q = q.Where("id_departamento = ?", f.IDDepartamentoSoporte)
 	}
 	if f.Estado != nil {
 		q = q.Where("estado = ?", *f.Estado)
@@ -45,7 +45,7 @@ func (r *TecnicoRepository) List(ctx context.Context, f ports.ListTecnicosFilter
 	}
 
 	var rows []dbmodels.Tecnico
-	if err := q.Order("id ASC").Limit(f.Limit).Offset(f.Offset).Find(&rows).Error; err != nil {
+	if err := q.Preload("DepartamentoSoporte").Order("id ASC").Limit(f.Limit).Offset(f.Offset).Find(&rows).Error; err != nil {
 		return nil, 0, wrapListError("tecnicos", err)
 	}
 
@@ -58,7 +58,7 @@ func (r *TecnicoRepository) List(ctx context.Context, f ports.ListTecnicosFilter
 
 func (r *TecnicoRepository) GetByID(ctx context.Context, id int) (domain.Tecnico, error) {
 	var row dbmodels.Tecnico
-	if err := r.db.WithContext(ctx).First(&row, id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("DepartamentoSoporte").First(&row, id).Error; err != nil {
 		return domain.Tecnico{}, wrapDBError("tecnico", err)
 	}
 	return toTecnicoDomain(row), nil
@@ -66,7 +66,7 @@ func (r *TecnicoRepository) GetByID(ctx context.Context, id int) (domain.Tecnico
 
 func (r *TecnicoRepository) GetByRutDV(ctx context.Context, rut, dv string) (domain.Tecnico, error) {
 	var row dbmodels.Tecnico
-	if err := r.db.WithContext(ctx).Where("rut = ? AND dv = ?", rut, dv).Take(&row).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("DepartamentoSoporte").Where("rut = ? AND dv = ?", rut, dv).Take(&row).Error; err != nil {
 		return domain.Tecnico{}, wrapDBError("tecnico", err)
 	}
 	return toTecnicoDomain(row), nil
@@ -106,6 +106,7 @@ func toTecnicoDomain(row dbmodels.Tecnico) domain.Tecnico {
 		Estado:                estado,
 		CreatedAt:             row.CreatedAt,
 		UpdatedAt:             row.UpdatedAt,
+		DepartamentoSoporte:   toDepartamentoSoportePtr(row.DepartamentoSoporte),
 	}
 }
 

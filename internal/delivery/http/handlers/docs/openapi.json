@@ -487,6 +487,11 @@
             "description": "Filtrar por técnico asignado"
           },
           {
+            "in": "query", "name": "rut_tecnico",
+            "schema": { "type": "string" },
+            "description": "Filtrar por RUT completo del técnico asignado. Acepta formatos como 11111111-1, 111111111 o 11.111.111-1"
+          },
+          {
             "in": "query", "name": "id_solicitante",
             "schema": { "type": "integer" },
             "description": "Filtrar por solicitante"
@@ -918,10 +923,16 @@
     "/api/v1/tickets/{id}/traspasos": {
       "get": {
         "tags": ["tickets"],
-        "summary": "Listar traspasos de un ticket",
-        "description": "Retorna los traspasos del ticket con paginación y filtro opcional por estado (PENDIENTE, ACEPTADO, RECHAZADO).",
+        "summary": "Listar solicitudes de traspaso por técnico destino",
+        "description": "Retorna las solicitudes de traspaso recibidas por el técnico destino indicado en el path, con paginación y filtro opcional por estado (PENDIENTE, ACEPTADO, RECHAZADO). Si estado viene vacío, retorna todas.",
         "parameters": [
-          { "$ref": "#/components/parameters/IDParam" },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer", "minimum": 1 },
+            "description": "ID del técnico destino"
+          },
           {
             "in": "query", "name": "estado",
             "schema": { "type": "string", "enum": ["PENDIENTE", "ACEPTADO", "RECHAZADO"] },
@@ -987,9 +998,16 @@
       "patch": {
         "tags": ["tickets"],
         "summary": "Resolver traspaso (aceptar o rechazar)",
-        "description": "Si se acepta: cambia técnico asignado, registra TRA + PRO en trazabilidad. Si se rechaza: ticket vuelve a PRO.",
+        "description": "Resuelve un traspaso por ID. Requiere además el id_tecnico_destino por query y debe coincidir con el técnico destino registrado en el traspaso. La trazabilidad de la creación de solicitud (STR) queda con el técnico origen. La trazabilidad al aceptar o rechazar queda con el técnico destino. Si se acepta: cambia técnico asignado, registra TRA + PRO en trazabilidad. Si se rechaza: ticket vuelve a PRO.",
         "parameters": [
-          { "$ref": "#/components/parameters/IDParam" }
+          { "$ref": "#/components/parameters/IDParam" },
+          {
+            "in": "query",
+            "name": "id_tecnico_destino",
+            "required": true,
+            "schema": { "type": "integer", "minimum": 1 },
+            "description": "ID del técnico destino que responde la solicitud"
+          }
         ],
         "requestBody": {
           "required": true,
@@ -1440,6 +1458,82 @@
         }
       },
 
+      "TicketSolicitanteResponse": {
+        "type": "object",
+        "properties": {
+          "id":              { "type": "integer", "example": 1 },
+          "id_servicio":     { "type": "integer", "nullable": true, "example": 1 },
+          "correo":          { "type": "string", "example": "juan@example.com" },
+          "rut":             { "type": "string", "example": "12345678" },
+          "dv":              { "type": "string", "example": "K" },
+          "nombre_completo": { "type": "string", "example": "JUAN PEREZ" },
+          "anexo":           { "type": "integer", "nullable": true, "example": 2301 },
+          "estado":          { "type": "boolean", "example": true }
+        }
+      },
+
+      "TicketTecnicoResponse": {
+        "type": "object",
+        "properties": {
+          "id":                      { "type": "integer", "example": 1 },
+          "rut":                     { "type": "string", "example": "11111111" },
+          "dv":                      { "type": "string", "example": "1" },
+          "nombre_completo":         { "type": "string", "example": "TECNICO UNO" },
+          "id_tipo_tecnico":         { "type": "integer", "nullable": true, "example": 1 },
+          "id_departamento_soporte": { "type": "integer", "nullable": true, "example": 1 },
+          "id_tipo_turno":           { "type": "integer", "nullable": true, "example": 1 },
+          "estado":                  { "type": "boolean", "example": true }
+        }
+      },
+
+      "TicketServicioResponse": {
+        "type": "object",
+        "properties": {
+          "id":                         { "type": "integer", "example": 1 },
+          "edificio":                   { "type": "string", "example": "EDIFICIO A" },
+          "piso":                       { "type": "integer", "example": 3 },
+          "servicios":                  { "type": "string", "example": "URGENCIA" },
+          "ubicacion":                  { "type": "string", "example": "ALA NORTE" },
+          "unidades":                   { "type": "string", "example": "UNIDAD CARDIOLOGIA" },
+          "id_nivel_prioridad_default": { "type": "integer", "nullable": true, "example": 1 }
+        }
+      },
+
+      "TicketTipoTicketResponse": {
+        "type": "object",
+        "properties": {
+          "id":              { "type": "integer", "example": 1 },
+          "cod_tipo_ticket": { "type": "string", "example": "INC" },
+          "descripcion":     { "type": "string", "example": "INCIDENCIA" }
+        }
+      },
+
+      "TicketEstadoResponse": {
+        "type": "object",
+        "properties": {
+          "id":                { "type": "integer", "example": 10 },
+          "descripcion":       { "type": "string", "example": "VISTO POR EL TECNICO" },
+          "cod_estado_ticket": { "type": "string", "example": "VITEC" }
+        }
+      },
+
+      "TicketNivelPrioridadResponse": {
+        "type": "object",
+        "properties": {
+          "id":          { "type": "integer", "example": 1 },
+          "descripcion": { "type": "string", "example": "ALTA" }
+        }
+      },
+
+      "TicketDepartamentoSoporteResponse": {
+        "type": "object",
+        "properties": {
+          "id":               { "type": "integer", "example": 1 },
+          "cod_departamento": { "type": "string", "example": "TI" },
+          "descripcion":      { "type": "string", "example": "TECNOLOGIA" }
+        }
+      },
+
       "CreateSolicitanteRequest": {
         "type": "object",
         "required": ["rut", "dv", "nombre_completo"],
@@ -1608,6 +1702,14 @@
           "updated_at":              { "type": "string", "format": "date-time" },
           "fecha_inicio_trabajo":    { "type": "string", "format": "date-time", "nullable": true },
           "fecha_fin_trabajo":       { "type": "string", "format": "date-time", "nullable": true },
+          "solicitante":             { "$ref": "#/components/schemas/TicketSolicitanteResponse" },
+          "tecnico_asignado":        { "$ref": "#/components/schemas/TicketTecnicoResponse" },
+          "servicio":                { "$ref": "#/components/schemas/TicketServicioResponse" },
+          "tipo_ticket":             { "$ref": "#/components/schemas/TicketTipoTicketResponse" },
+          "estado_ticket":           { "$ref": "#/components/schemas/TicketEstadoResponse" },
+          "nivel_prioridad":         { "$ref": "#/components/schemas/TicketNivelPrioridadResponse" },
+          "catalogo_falla":          { "$ref": "#/components/schemas/CatalogoFallaResponse" },
+          "departamento_soporte":    { "$ref": "#/components/schemas/TicketDepartamentoSoporteResponse" },
           "trazabilidad": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/TrazabilidadResponse" }
@@ -1765,7 +1867,15 @@
           "created_at":              { "type": "string", "format": "date-time" },
           "updated_at":              { "type": "string", "format": "date-time" },
           "fecha_inicio_trabajo":    { "type": "string", "format": "date-time", "nullable": true },
-          "fecha_fin_trabajo":       { "type": "string", "format": "date-time", "nullable": true }
+          "fecha_fin_trabajo":       { "type": "string", "format": "date-time", "nullable": true },
+          "solicitante":             { "$ref": "#/components/schemas/TicketSolicitanteResponse" },
+          "tecnico_asignado":        { "$ref": "#/components/schemas/TicketTecnicoResponse" },
+          "servicio":                { "$ref": "#/components/schemas/TicketServicioResponse" },
+          "tipo_ticket":             { "$ref": "#/components/schemas/TicketTipoTicketResponse" },
+          "estado_ticket":           { "$ref": "#/components/schemas/TicketEstadoResponse" },
+          "nivel_prioridad":         { "$ref": "#/components/schemas/TicketNivelPrioridadResponse" },
+          "catalogo_falla":          { "$ref": "#/components/schemas/CatalogoFallaResponse" },
+          "departamento_soporte":    { "$ref": "#/components/schemas/TicketDepartamentoSoporteResponse" }
         }
       },
 
@@ -1863,7 +1973,8 @@
           "id_tipo_turno":           { "type": "integer", "nullable": true, "example": 1 },
           "estado":                  { "type": "boolean", "example": true },
           "created_at":              { "type": "string", "format": "date-time" },
-          "updated_at":              { "type": "string", "format": "date-time" }
+          "updated_at":              { "type": "string", "format": "date-time" },
+          "departamento_soporte":    { "$ref": "#/components/schemas/TicketDepartamentoSoporteResponse" }
         }
       },
 

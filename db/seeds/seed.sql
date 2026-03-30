@@ -37,3 +37,10 @@ VALUES (1, 'CREADO', 'CRE'),
        (9, 'REABIERTO', 'REA'),
        (10, 'VISTO POR EL TÉCNICO', 'VITEC')
 ON CONFLICT (id) DO NOTHING;
+
+-- Estados de traslado
+INSERT INTO estado_traslado (id, cod_traslado, descripcion)
+VALUES (1, 'PENDIENTE', 'PENDIENTE'),
+       (2, 'ACEPTADO', 'ACEPTADO'),
+       (3, 'RECHAZADO', 'RECHAZADO')
+ON CONFLICT (id) DO NOTHING;

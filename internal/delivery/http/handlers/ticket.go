@@ -40,6 +40,7 @@ func (h TicketHandler) ListTickets(c *gin.Context) {
 	result, err := h.service.ListTickets(c.Request.Context(), services.ListTicketsQuery{
 		CodEstadoTicket:       query.CodEstadoTicket,
 		IDTecnicoAsignado:     query.IDTecnicoAsignado,
+		RutTecnico:            query.RutTecnico,
 		IDSolicitante:         query.IDSolicitante,
 		IDDepartamentoSoporte: query.IDDepartamentoSoporte,
 		Critico:               query.Critico,
@@ -53,7 +54,6 @@ func (h TicketHandler) ListTickets(c *gin.Context) {
 
 	list(c, contracts.NewTicketsResponse(result.Items), result.Total, result.Limit, result.Offset)
 }
-
 
 func (h TicketHandler) UpdateTicket(c *gin.Context) {
 	id, ok := getID(c)
@@ -340,6 +340,11 @@ func (h TicketHandler) ResolverTraspaso(c *gin.Context) {
 		return
 	}
 
+	query, ok := bindQuery[contracts.ResolverTraspasoQuery](c)
+	if !ok {
+		return
+	}
+
 	request, ok := bindJSON[contracts.ResolverTraspasoRequest](c)
 	if !ok {
 		return
@@ -347,6 +352,7 @@ func (h TicketHandler) ResolverTraspaso(c *gin.Context) {
 
 	err := h.service.ResolverTraspaso(c.Request.Context(), services.ResolverTraspasoCommand{
 		IDTraspaso:           id,
+		IDTecnicoDestino:     query.IDTecnicoDestino,
 		EstadoTraspaso:       request.EstadoTraspaso,
 		ComentarioResolucion: request.ComentarioResolucion,
 	})
@@ -359,7 +365,7 @@ func (h TicketHandler) ResolverTraspaso(c *gin.Context) {
 }
 
 func (h TicketHandler) ListTraspasos(c *gin.Context) {
-	id, ok := getID(c)
+	idTecnicoDestino, ok := getID(c)
 	if !ok {
 		return
 	}
@@ -370,10 +376,10 @@ func (h TicketHandler) ListTraspasos(c *gin.Context) {
 	}
 
 	result, err := h.service.ListTraspasos(c.Request.Context(), services.ListTraspasosQuery{
-		IDTicket: id,
-		Estado:   query.Estado,
-		Limit:    query.Limit,
-		Offset:   query.Offset,
+		IDTecnicoDestino: idTecnicoDestino,
+		Estado:           query.Estado,
+		Limit:            query.Limit,
+		Offset:           query.Offset,
 	})
 	if err != nil {
 		fail(c, err)

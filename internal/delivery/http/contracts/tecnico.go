@@ -32,16 +32,17 @@ type UpdateTecnicoRequest struct {
 }
 
 type TecnicoResponse struct {
-	ID                    int    `json:"id"`
-	Rut                   string `json:"rut"`
-	Dv                    string `json:"dv"`
-	NombreCompleto        string `json:"nombre_completo"`
-	IDTipoTecnico         *int   `json:"id_tipo_tecnico,omitempty"`
-	IDDepartamentoSoporte *int   `json:"id_departamento_soporte,omitempty"`
-	IDTipoTurno           *int   `json:"id_tipo_turno,omitempty"`
-	Estado                bool   `json:"estado"`
-	CreatedAt             string `json:"created_at"`
-	UpdatedAt             string `json:"updated_at"`
+	ID                    int                                `json:"id"`
+	Rut                   string                             `json:"rut"`
+	Dv                    string                             `json:"dv"`
+	NombreCompleto        string                             `json:"nombre_completo"`
+	IDTipoTecnico         *int                               `json:"id_tipo_tecnico,omitempty"`
+	IDDepartamentoSoporte *int                               `json:"id_departamento_soporte,omitempty"`
+	IDTipoTurno           *int                               `json:"id_tipo_turno,omitempty"`
+	Estado                bool                               `json:"estado"`
+	CreatedAt             string                             `json:"created_at"`
+	UpdatedAt             string                             `json:"updated_at"`
+	DepartamentoSoporte   *TicketDepartamentoSoporteResponse `json:"departamento_soporte,omitempty"`
 }
 
 func NewTecnicoResponse(t domain.Tecnico) TecnicoResponse {
@@ -57,6 +58,7 @@ func NewTecnicoResponse(t domain.Tecnico) TecnicoResponse {
 		Estado:                t.Estado,
 		CreatedAt:             t.CreatedAt.Format(timeFmt),
 		UpdatedAt:             t.UpdatedAt.Format(timeFmt),
+		DepartamentoSoporte:   newTicketDepartamentoSoporteResponse(t.DepartamentoSoporte),
 	}
 }
 

@@ -49,6 +49,9 @@ func setupTicketService(t *testing.T) (*services.TicketService, *gorm.DB) {
 	db.Exec("INSERT INTO estado_ticket (id, descripcion, cod_estado_ticket) VALUES (10, 'VISTO POR EL TÉCNICO', 'VITEC')")
 	db.Exec("INSERT INTO estado_ticket (id, descripcion, cod_estado_ticket) VALUES (11, 'TRASPASADO A OTRO TÉCNICO', 'TRA')")
 	db.Exec("INSERT INTO estado_ticket (id, descripcion, cod_estado_ticket) VALUES (12, 'SOLICITUD DE TRASPASO', 'STR')")
+	db.Exec("INSERT INTO estado_traslado (id, cod_traslado, descripcion) VALUES (1, 'PENDIENTE', 'PENDIENTE')")
+	db.Exec("INSERT INTO estado_traslado (id, cod_traslado, descripcion) VALUES (2, 'ACEPTADO', 'ACEPTADO')")
+	db.Exec("INSERT INTO estado_traslado (id, cod_traslado, descripcion) VALUES (3, 'RECHAZADO', 'RECHAZADO')")
 
 	// seed tipo_ticket
 	db.Exec("INSERT INTO tipo_ticket (id, cod_tipo_ticket, descripcion) VALUES (1, 'INC', 'INCIDENCIA')")
@@ -79,7 +82,8 @@ func setupTicketService(t *testing.T) (*services.TicketService, *gorm.DB) {
 	solRepo := repository.NewSolicitanteRepository(db)
 	ticketRepo := repository.NewTicketRepository(db)
 	catalogoRepo := repository.NewCatalogoRepository(db)
-	svc := services.NewTicketService(ticketRepo, solRepo, catalogoRepo)
+	tecnicoRepo := repository.NewTecnicoRepository(db)
+	svc := services.NewTicketService(ticketRepo, solRepo, catalogoRepo, tecnicoRepo)
 	return svc, db
 }
 
@@ -1717,6 +1721,9 @@ func TestCreateTraspasoOK(t *testing.T) {
 	for _, traz := range detalle.Trazabilidad {
 		if traz.CodEstadoTicket == "STR" {
 			found = true
+			if traz.RutResponsable != "11111111-1" {
+				t.Errorf("rut_responsable STR = %q, want 11111111-1", traz.RutResponsable)
+			}
 		}
 	}
 	if !found {
@@ -1846,6 +1853,7 @@ func TestResolverTraspasoAceptado(t *testing.T) {
 
 	err = svc.ResolverTraspaso(ctx, services.ResolverTraspasoCommand{
 		IDTraspaso:           traspaso.ID,
+		IDTecnicoDestino:     2,
 		EstadoTraspaso:       "ACEPTADO",
 		ComentarioResolucion: "Sin problema",
 	})
@@ -1866,21 +1874,22 @@ func TestResolverTraspasoAceptado(t *testing.T) {
 	}
 
 	// verificar trazabilidad: debe tener TRA y PRO
-	foundTRA := false
-	foundPRO := false
-	for _, traz := range detalle.Trazabilidad {
-		if traz.CodEstadoTicket == "TRA" {
-			foundTRA = true
-		}
-		if traz.CodEstadoTicket == "PRO" {
-			foundPRO = true
-		}
+	if len(detalle.Trazabilidad) < 2 {
+		t.Fatalf("trazabilidad len = %d, want at least 2", len(detalle.Trazabilidad))
 	}
-	if !foundTRA {
-		t.Error("trazabilidad TRA not found")
+	lastTRA := detalle.Trazabilidad[len(detalle.Trazabilidad)-2]
+	lastPRO := detalle.Trazabilidad[len(detalle.Trazabilidad)-1]
+	if lastTRA.CodEstadoTicket != "TRA" {
+		t.Fatalf("last TRA state = %q, want TRA", lastTRA.CodEstadoTicket)
 	}
-	if !foundPRO {
-		t.Error("trazabilidad PRO not found after TRA")
+	if lastTRA.RutResponsable != "22222222-2" {
+		t.Errorf("rut_responsable TRA = %q, want 22222222-2", lastTRA.RutResponsable)
+	}
+	if lastPRO.CodEstadoTicket != "PRO" {
+		t.Fatalf("last PRO state = %q, want PRO", lastPRO.CodEstadoTicket)
+	}
+	if lastPRO.RutResponsable != "22222222-2" {
+		t.Errorf("rut_responsable PRO = %q, want 22222222-2", lastPRO.RutResponsable)
 	}
 }
 
@@ -1903,6 +1912,7 @@ func TestResolverTraspasoRechazado(t *testing.T) {
 
 	err = svc.ResolverTraspaso(ctx, services.ResolverTraspasoCommand{
 		IDTraspaso:           traspaso.ID,
+		IDTecnicoDestino:     2,
 		EstadoTraspaso:       "RECHAZADO",
 		ComentarioResolucion: "No puedo tomar el ticket",
 	})
@@ -1920,6 +1930,16 @@ func TestResolverTraspasoRechazado(t *testing.T) {
 	}
 	if detalle.Ticket.IDTecnicoAsignado == nil || *detalle.Ticket.IDTecnicoAsignado != 1 {
 		t.Errorf("tecnico_asignado = %v, want 1 (unchanged)", detalle.Ticket.IDTecnicoAsignado)
+	}
+	if len(detalle.Trazabilidad) == 0 {
+		t.Fatal("trazabilidad is empty")
+	}
+	lastPRO := detalle.Trazabilidad[len(detalle.Trazabilidad)-1]
+	if lastPRO.CodEstadoTicket != "PRO" {
+		t.Fatalf("last PRO state = %q, want PRO", lastPRO.CodEstadoTicket)
+	}
+	if lastPRO.RutResponsable != "22222222-2" {
+		t.Errorf("rut_responsable PRO = %q, want 22222222-2", lastPRO.RutResponsable)
 	}
 }
 
@@ -1942,8 +1962,9 @@ func TestResolverTraspasoYaResuelto(t *testing.T) {
 
 	// resolver
 	err = svc.ResolverTraspaso(ctx, services.ResolverTraspasoCommand{
-		IDTraspaso:     traspaso.ID,
-		EstadoTraspaso: "RECHAZADO",
+		IDTraspaso:       traspaso.ID,
+		IDTecnicoDestino: 2,
+		EstadoTraspaso:   "RECHAZADO",
 	})
 	if err != nil {
 		t.Fatalf("resolver 1: %v", err)
@@ -1951,8 +1972,9 @@ func TestResolverTraspasoYaResuelto(t *testing.T) {
 
 	// intentar resolver de nuevo
 	err = svc.ResolverTraspaso(ctx, services.ResolverTraspasoCommand{
-		IDTraspaso:     traspaso.ID,
-		EstadoTraspaso: "ACEPTADO",
+		IDTraspaso:       traspaso.ID,
+		IDTecnicoDestino: 2,
+		EstadoTraspaso:   "ACEPTADO",
 	})
 	if err == nil {
 		t.Fatal("expected error, traspaso already resolved")
@@ -1971,11 +1993,12 @@ func TestListTraspasosWithFilter(t *testing.T) {
 	svc, _ := setupTicketService(t)
 	ctx := context.Background()
 
-	ticket := createTicketInPRO(t, svc)
+	ticket1 := createTicketInPRO(t, svc)
+	ticket2 := createTicketInPRO(t, svc)
+	ticket3 := createTicketInPRO(t, svc)
 
-	// crear traspaso y rechazarlo
 	traspaso, err := svc.CreateTraspaso(ctx, services.CreateTraspasoCommand{
-		IDTicket:         ticket.ID,
+		IDTicket:         ticket1.ID,
 		IDTecnicoOrigen:  1,
 		IDTecnicoDestino: 2,
 		Motivo:           "primer intento",
@@ -1985,16 +2008,16 @@ func TestListTraspasosWithFilter(t *testing.T) {
 	}
 
 	err = svc.ResolverTraspaso(ctx, services.ResolverTraspasoCommand{
-		IDTraspaso:     traspaso.ID,
-		EstadoTraspaso: "RECHAZADO",
+		IDTraspaso:       traspaso.ID,
+		IDTecnicoDestino: 2,
+		EstadoTraspaso:   "RECHAZADO",
 	})
 	if err != nil {
 		t.Fatalf("resolver: %v", err)
 	}
 
-	// crear otro traspaso (ticket volvió a PRO)
 	_, err = svc.CreateTraspaso(ctx, services.CreateTraspasoCommand{
-		IDTicket:         ticket.ID,
+		IDTicket:         ticket2.ID,
 		IDTecnicoOrigen:  1,
 		IDTecnicoDestino: 2,
 		Motivo:           "segundo intento",
@@ -2003,9 +2026,18 @@ func TestListTraspasosWithFilter(t *testing.T) {
 		t.Fatalf("create traspaso 2: %v", err)
 	}
 
-	// listar todos
+	_, err = svc.CreateTraspaso(ctx, services.CreateTraspasoCommand{
+		IDTicket:         ticket3.ID,
+		IDTecnicoOrigen:  1,
+		IDTecnicoDestino: 3,
+		Motivo:           "otro destino",
+	})
+	if err != nil {
+		t.Fatalf("create traspaso 3: %v", err)
+	}
+
 	result, err := svc.ListTraspasos(ctx, services.ListTraspasosQuery{
-		IDTicket: ticket.ID,
+		IDTecnicoDestino: 2,
 	})
 	if err != nil {
 		t.Fatalf("list: %v", err)
@@ -2014,10 +2046,9 @@ func TestListTraspasosWithFilter(t *testing.T) {
 		t.Errorf("total = %d, want 2", result.Total)
 	}
 
-	// filtrar PENDIENTE
 	result, err = svc.ListTraspasos(ctx, services.ListTraspasosQuery{
-		IDTicket: ticket.ID,
-		Estado:   "PENDIENTE",
+		IDTecnicoDestino: 2,
+		Estado:           "PENDIENTE",
 	})
 	if err != nil {
 		t.Fatalf("list pendiente: %v", err)
@@ -2026,16 +2057,71 @@ func TestListTraspasosWithFilter(t *testing.T) {
 		t.Errorf("total pendiente = %d, want 1", result.Total)
 	}
 
-	// filtrar RECHAZADO
 	result, err = svc.ListTraspasos(ctx, services.ListTraspasosQuery{
-		IDTicket: ticket.ID,
-		Estado:   "RECHAZADO",
+		IDTecnicoDestino: 2,
+		Estado:           "RECHAZADO",
 	})
 	if err != nil {
 		t.Fatalf("list rechazado: %v", err)
 	}
 	if result.Total != 1 {
 		t.Errorf("total rechazado = %d, want 1", result.Total)
+	}
+}
+
+func TestListTraspasosEmptyResult(t *testing.T) {
+	t.Parallel()
+	svc, _ := setupTicketService(t)
+	ctx := context.Background()
+
+	result, err := svc.ListTraspasos(ctx, services.ListTraspasosQuery{
+		IDTecnicoDestino: 2,
+		Estado:           "PENDIENTE",
+		Limit:            20,
+		Offset:           0,
+	})
+	if err != nil {
+		t.Fatalf("list empty: %v", err)
+	}
+	if result.Total != 0 {
+		t.Fatalf("total = %d, want 0", result.Total)
+	}
+	if len(result.Items) != 0 {
+		t.Fatalf("len(items) = %d, want 0", len(result.Items))
+	}
+}
+
+func TestResolverTraspasoTecnicoDestinoIncorrecto(t *testing.T) {
+	t.Parallel()
+	svc, _ := setupTicketService(t)
+	ctx := context.Background()
+
+	ticket := createTicketInPRO(t, svc)
+
+	traspaso, err := svc.CreateTraspaso(ctx, services.CreateTraspasoCommand{
+		IDTicket:         ticket.ID,
+		IDTecnicoOrigen:  1,
+		IDTecnicoDestino: 2,
+		Motivo:           "motivo",
+	})
+	if err != nil {
+		t.Fatalf("create traspaso: %v", err)
+	}
+
+	err = svc.ResolverTraspaso(ctx, services.ResolverTraspasoCommand{
+		IDTraspaso:       traspaso.ID,
+		IDTecnicoDestino: 3,
+		EstadoTraspaso:   "ACEPTADO",
+	})
+	if err == nil {
+		t.Fatal("expected error, tecnico destino should not be allowed")
+	}
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) {
+		t.Fatal("expected domain.Error")
+	}
+	if appErr.Status() != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", appErr.Status())
 	}
 }
 
@@ -2370,6 +2456,53 @@ func TestGetTicketByIDOK(t *testing.T) {
 	}
 }
 
+func TestGetTicketByIDIncludesRelations(t *testing.T) {
+	t.Parallel()
+	svc, _ := setupTicketService(t)
+	ctx := context.Background()
+
+	ticket := createTicketForAssign(t, svc)
+	_, err := svc.Assign(ctx, services.AssignTicketCommand{
+		IDTicket:          ticket.ID,
+		IDTecnicoAsignado: 1,
+		IDCatalogoFalla:   1,
+		IDNivelPrioridad:  1,
+	})
+	if err != nil {
+		t.Fatalf("assign ticket: %v", err)
+	}
+
+	got, err := svc.GetByID(ctx, ticket.ID)
+	if err != nil {
+		t.Fatalf("get by id: %v", err)
+	}
+
+	if got.Solicitante == nil || got.Solicitante.ID != 1 {
+		t.Fatalf("solicitante = %#v, want ID 1", got.Solicitante)
+	}
+	if got.TecnicoAsignado == nil || got.TecnicoAsignado.ID != 1 {
+		t.Fatalf("tecnico_asignado = %#v, want ID 1", got.TecnicoAsignado)
+	}
+	if got.Servicio == nil || got.Servicio.ID != 1 {
+		t.Fatalf("servicio = %#v, want ID 1", got.Servicio)
+	}
+	if got.TipoTicket == nil || got.TipoTicket.ID != 1 {
+		t.Fatalf("tipo_ticket = %#v, want ID 1", got.TipoTicket)
+	}
+	if got.EstadoTicket == nil || got.EstadoTicket.CodEstadoTicket != "ASI" {
+		t.Fatalf("estado_ticket = %#v, want ASI", got.EstadoTicket)
+	}
+	if got.NivelPrioridad == nil || got.NivelPrioridad.ID != 1 {
+		t.Fatalf("nivel_prioridad = %#v, want ID 1", got.NivelPrioridad)
+	}
+	if got.CatalogoFalla == nil || got.CatalogoFalla.ID != 1 {
+		t.Fatalf("catalogo_falla = %#v, want ID 1", got.CatalogoFalla)
+	}
+	if got.DepartamentoSoporte == nil || got.DepartamentoSoporte.ID != 1 {
+		t.Fatalf("departamento_soporte = %#v, want ID 1", got.DepartamentoSoporte)
+	}
+}
+
 func TestGetTicketByIDNotFound(t *testing.T) {
 	t.Parallel()
 	svc, _ := setupTicketService(t)
@@ -2414,8 +2547,8 @@ func TestListTicketsFilterEstado(t *testing.T) {
 	svc, _ := setupTicketService(t)
 	ctx := context.Background()
 
-	createTicketForAssign(t, svc)            // CRE
-	ticket2 := createTicketInPRO(t, svc)      // PRO
+	createTicketForAssign(t, svc)        // CRE
+	ticket2 := createTicketInPRO(t, svc) // PRO
 	_ = ticket2
 
 	result, err := svc.ListTickets(ctx, services.ListTicketsQuery{
@@ -2431,6 +2564,74 @@ func TestListTicketsFilterEstado(t *testing.T) {
 		if item.CodEstadoTicket != "PRO" {
 			t.Errorf("got estado %s, want PRO", item.CodEstadoTicket)
 		}
+	}
+}
+
+func TestListTicketsFilterRutTecnico(t *testing.T) {
+	t.Parallel()
+	svc, _ := setupTicketService(t)
+	ctx := context.Background()
+
+	ticket1 := createTicketForAssign(t, svc)
+	_, err := svc.Assign(ctx, services.AssignTicketCommand{
+		IDTicket:          ticket1.ID,
+		IDTecnicoAsignado: 1,
+		IDCatalogoFalla:   1,
+		IDNivelPrioridad:  1,
+	})
+	if err != nil {
+		t.Fatalf("assign ticket 1: %v", err)
+	}
+
+	ticket2 := createTicketForAssign(t, svc)
+	_, err = svc.Assign(ctx, services.AssignTicketCommand{
+		IDTicket:          ticket2.ID,
+		IDTecnicoAsignado: 2,
+		IDCatalogoFalla:   1,
+		IDNivelPrioridad:  1,
+	})
+	if err != nil {
+		t.Fatalf("assign ticket 2: %v", err)
+	}
+
+	result, err := svc.ListTickets(ctx, services.ListTicketsQuery{
+		RutTecnico: "11111111-1",
+	})
+	if err != nil {
+		t.Fatalf("list by rut_tecnico: %v", err)
+	}
+	if result.Total != 1 {
+		t.Fatalf("total = %d, want 1", result.Total)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("items = %d, want 1", len(result.Items))
+	}
+	if result.Items[0].ID != ticket1.ID {
+		t.Fatalf("ticket id = %d, want %d", result.Items[0].ID, ticket1.ID)
+	}
+	if result.Items[0].TecnicoAsignado == nil || result.Items[0].TecnicoAsignado.Dv != "1" {
+		t.Fatalf("tecnico_asignado = %#v, want dv 1", result.Items[0].TecnicoAsignado)
+	}
+}
+
+func TestListTicketsFilterRutTecnicoInvalid(t *testing.T) {
+	t.Parallel()
+	svc, _ := setupTicketService(t)
+	ctx := context.Background()
+
+	_, err := svc.ListTickets(ctx, services.ListTicketsQuery{
+		RutTecnico: "ABC",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	var appErr *domain.Error
+	if !errors.As(err, &appErr) {
+		t.Fatal("expected domain.Error")
+	}
+	if appErr.Status() != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", appErr.Status())
 	}
 }
 

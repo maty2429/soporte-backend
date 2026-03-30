@@ -67,7 +67,7 @@ func NewRouter(log *slog.Logger, cfg config.Config, db *gorm.DB, startedAt time.
 	catalogoHandler := handlers.NewCatalogoHandler(services.NewCatalogoService(catalogoRepo))
 	servicioHandler := handlers.NewServicioHandler(services.NewServicioService(gormrepo.NewServicioRepository(db)))
 	catalogoFallaHandler := handlers.NewCatalogoFallaHandler(services.NewCatalogoFallaService(gormrepo.NewCatalogoFallaRepository(db)))
-	ticketHandler := handlers.NewTicketHandler(services.NewTicketService(gormrepo.NewTicketRepository(db), solicitanteRepo, catalogoRepo))
+	ticketHandler := handlers.NewTicketHandler(services.NewTicketService(gormrepo.NewTicketRepository(db), solicitanteRepo, catalogoRepo, tecnicoRepo))
 
 	v1 := router.Group("/api/v1")
 

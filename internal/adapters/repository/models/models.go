@@ -14,6 +14,7 @@ func All() []any {
 		&CatalogoFalla{},
 		&TipoTurno{},
 		&EstadoTicket{},
+		&EstadoTraslado{},
 		&Ticket{},
 		&TrazabilidadTicket{},
 		&BitacoraTicket{},

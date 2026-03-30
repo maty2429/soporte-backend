@@ -10,24 +10,40 @@ type EstadoTicket struct {
 
 func (EstadoTicket) TableName() string { return "estado_ticket" }
 
+type EstadoTraslado struct {
+	ID          int    `gorm:"column:id;primaryKey"`
+	CodTraslado string `gorm:"column:cod_traslado;not null;uniqueIndex"`
+	Descripcion string `gorm:"column:descripcion;not null;uniqueIndex"`
+}
+
+func (EstadoTraslado) TableName() string { return "estado_traslado" }
+
 type Ticket struct {
-	ID                    int        `gorm:"column:id;primaryKey"`
-	NroTicket             string     `gorm:"column:nro_ticket;not null;uniqueIndex"`
-	IDSolicitante         int        `gorm:"column:id_solicitante;not null"`
-	IDTecnicoAsignado     *int       `gorm:"column:id_tecnico_asignado"`
-	IDServicio            *int       `gorm:"column:id_servicio"`
-	IDTipoTicket          int        `gorm:"column:id_tipo_ticket;not null"`
-	CodEstadoTicket       string     `gorm:"column:cod_estado_ticket;not null"`
-	IDNivelPrioridad      *int       `gorm:"column:id_nivel_prioridad"`
-	IDCatalogoFalla       *int       `gorm:"column:id_catalogo_falla"`
-	IDDepartamentoSoporte *int       `gorm:"column:id_departamento_soporte"`
-	Critico               bool       `gorm:"column:critico;default:false"`
-	DetalleFallaReportada string     `gorm:"column:detalle_falla_reportada;not null"`
-	UbicacionObs          string     `gorm:"column:ubicacion_obs;not null;default:SIN OBSERVACION"`
-	CreatedAt             time.Time  `gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt             time.Time  `gorm:"column:updated_at;autoUpdateTime"`
-	FechaInicioTrabajo    *time.Time `gorm:"column:fecha_inicio_trabajo"`
-	FechaFinTrabajo       *time.Time `gorm:"column:fecha_fin_trabajo"`
+	ID                    int                  `gorm:"column:id;primaryKey"`
+	NroTicket             string               `gorm:"column:nro_ticket;not null;uniqueIndex"`
+	IDSolicitante         int                  `gorm:"column:id_solicitante;not null"`
+	IDTecnicoAsignado     *int                 `gorm:"column:id_tecnico_asignado"`
+	IDServicio            *int                 `gorm:"column:id_servicio"`
+	IDTipoTicket          int                  `gorm:"column:id_tipo_ticket;not null"`
+	CodEstadoTicket       string               `gorm:"column:cod_estado_ticket;not null"`
+	IDNivelPrioridad      *int                 `gorm:"column:id_nivel_prioridad"`
+	IDCatalogoFalla       *int                 `gorm:"column:id_catalogo_falla"`
+	IDDepartamentoSoporte *int                 `gorm:"column:id_departamento_soporte"`
+	Critico               bool                 `gorm:"column:critico;default:false"`
+	DetalleFallaReportada string               `gorm:"column:detalle_falla_reportada;not null"`
+	UbicacionObs          string               `gorm:"column:ubicacion_obs;not null;default:SIN OBSERVACION"`
+	CreatedAt             time.Time            `gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt             time.Time            `gorm:"column:updated_at;autoUpdateTime"`
+	FechaInicioTrabajo    *time.Time           `gorm:"column:fecha_inicio_trabajo"`
+	FechaFinTrabajo       *time.Time           `gorm:"column:fecha_fin_trabajo"`
+	Solicitante           *Solicitante         `gorm:"-:migration;foreignKey:IDSolicitante;references:ID"`
+	TecnicoAsignado       *Tecnico             `gorm:"-:migration;foreignKey:IDTecnicoAsignado;references:ID"`
+	Servicio              *Servicio            `gorm:"-:migration;foreignKey:IDServicio;references:ID"`
+	TipoTicket            *TipoTicket          `gorm:"-:migration;foreignKey:IDTipoTicket;references:ID"`
+	EstadoTicket          *EstadoTicket        `gorm:"-:migration;foreignKey:CodEstadoTicket;references:CodEstadoTicket"`
+	NivelPrioridad        *NivelPrioridad      `gorm:"-:migration;foreignKey:IDNivelPrioridad;references:ID"`
+	CatalogoFalla         *CatalogoFalla       `gorm:"-:migration;foreignKey:IDCatalogoFalla;references:ID"`
+	DepartamentoSoporte   *DepartamentoSoporte `gorm:"-:migration;foreignKey:IDDepartamentoSoporte;references:ID"`
 }
 
 func (Ticket) TableName() string { return "ticket" }
@@ -83,11 +99,11 @@ type TicketTraspaso struct {
 	IDTicket             int        `gorm:"column:id_ticket;not null"`
 	IDTecnicoOrigen      int        `gorm:"column:id_tecnico_origen;not null"`
 	IDTecnicoDestino     int        `gorm:"column:id_tecnico_destino;not null"`
-	EstadoTraspaso       string     `gorm:"column:estado_traspaso;not null;default:PENDIENTE"`
-	Motivo               string     `gorm:"column:motivo;not null"`
-	ComentarioResolucion string     `gorm:"column:comentario_resolucion"`
+	EstadoTraspaso       string     `gorm:"column:cod_traslado;not null"`
+	Motivo               string     `gorm:"column:motivo_solicitud;not null"`
+	ComentarioResolucion string     `gorm:"column:motivo_respuesta"`
 	FechaSolicitud       time.Time  `gorm:"column:fecha_solicitud;autoCreateTime"`
-	FechaResolucion      *time.Time `gorm:"column:fecha_resolucion"`
+	FechaResolucion      *time.Time `gorm:"column:fecha_respuesta"`
 }
 
-func (TicketTraspaso) TableName() string { return "ticket_traspasos" }
+func (TicketTraspaso) TableName() string { return "traspaso_ticket" }

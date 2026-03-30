@@ -13,30 +13,32 @@ import (
 )
 
 const (
-	codEstadoCreado    = "CRE"
-	codEstadoAsignado  = "ASI"
-	codEstadoProgreso  = "PRO"
-	codEstadoPausado   = "PAU"
+	codEstadoCreado      = "CRE"
+	codEstadoAsignado    = "ASI"
+	codEstadoProgreso    = "PRO"
+	codEstadoPausado     = "PAU"
 	codEstadoTerminado   = "TER"
 	codEstadoCerrado     = "CER"
 	codEstadoSolTraspaso = "STR"
 	codEstadoTraspasado  = "TRA"
 	codEstadoCancelado   = "CAN"
 	codEstadoVisto       = "VITEC"
-	maxRetryNro        = 5
+	maxRetryNro          = 5
 )
 
 type TicketService struct {
 	ticketRepo   ports.TicketRepository
 	solRepo      ports.SolicitanteRepository
 	catalogoRepo ports.CatalogoRepository
+	tecnicoRepo  ports.TecnicoRepository
 }
 
-func NewTicketService(ticketRepo ports.TicketRepository, solRepo ports.SolicitanteRepository, catalogoRepo ports.CatalogoRepository) *TicketService {
+func NewTicketService(ticketRepo ports.TicketRepository, solRepo ports.SolicitanteRepository, catalogoRepo ports.CatalogoRepository, tecnicoRepo ports.TecnicoRepository) *TicketService {
 	return &TicketService{
 		ticketRepo:   ticketRepo,
 		solRepo:      solRepo,
 		catalogoRepo: catalogoRepo,
+		tecnicoRepo:  tecnicoRepo,
 	}
 }
 
@@ -628,10 +630,10 @@ func (s *TicketService) CreateTraspaso(ctx context.Context, cmd CreateTraspasoCo
 		return domain.TicketTraspaso{}, wrapDomainError("get estado STR", err)
 	}
 
-	// buscar rut del solicitante para trazabilidad
-	sol, err := s.solRepo.GetByID(ctx, ticket.IDSolicitante)
+	// buscar técnico origen para rut en trazabilidad
+	tecnicoOrigen, err := s.tecnicoRepo.GetByID(ctx, cmd.IDTecnicoOrigen)
 	if err != nil {
-		return domain.TicketTraspaso{}, wrapDomainError("get solicitante", err)
+		return domain.TicketTraspaso{}, wrapDomainError("get tecnico origen", err)
 	}
 
 	traspaso := domain.TicketTraspaso{
@@ -655,7 +657,7 @@ func (s *TicketService) CreateTraspaso(ctx context.Context, cmd CreateTraspasoCo
 		traz := domain.TrazabilidadTicket{
 			IDTicket:        ticket.ID,
 			CodEstadoTicket: estadoSTR.CodEstadoTicket,
-			RutResponsable:  sol.Rut + "-" + sol.Dv,
+			RutResponsable:  tecnicoOrigen.Rut + "-" + tecnicoOrigen.Dv,
 		}
 		return txRepo.CreateTrazabilidad(ctx, &traz)
 	})
@@ -671,6 +673,9 @@ func (s *TicketService) ResolverTraspaso(ctx context.Context, cmd ResolverTraspa
 	if cmd.IDTraspaso <= 0 {
 		return domain.ValidationError("id_traspaso is required", nil)
 	}
+	if cmd.IDTecnicoDestino <= 0 {
+		return domain.ValidationError("id_tecnico_destino is required", nil)
+	}
 	estado := strings.TrimSpace(strings.ToUpper(cmd.EstadoTraspaso))
 	if estado != "ACEPTADO" && estado != "RECHAZADO" {
 		return domain.ValidationError("estado_traspaso must be ACEPTADO or RECHAZADO", nil)
@@ -685,6 +690,9 @@ func (s *TicketService) ResolverTraspaso(ctx context.Context, cmd ResolverTraspa
 	if traspaso.EstadoTraspaso != "PENDIENTE" {
 		return domain.ValidationError("el traspaso ya fue resuelto: "+traspaso.EstadoTraspaso, nil)
 	}
+	if traspaso.IDTecnicoDestino != cmd.IDTecnicoDestino {
+		return domain.ValidationError("el id_tecnico_destino no coincide con el traspaso", nil)
+	}
 
 	// buscar ticket
 	ticket, err := s.ticketRepo.GetByID(ctx, traspaso.IDTicket)
@@ -692,12 +700,12 @@ func (s *TicketService) ResolverTraspaso(ctx context.Context, cmd ResolverTraspa
 		return wrapDomainError("get ticket", err)
 	}
 
-	// buscar solicitante para rut en trazabilidad
-	sol, err := s.solRepo.GetByID(ctx, ticket.IDSolicitante)
+	// buscar técnico destino para trazabilidad de aceptación
+	tecnicoDestino, err := s.tecnicoRepo.GetByID(ctx, traspaso.IDTecnicoDestino)
 	if err != nil {
-		return wrapDomainError("get solicitante", err)
+		return wrapDomainError("get tecnico destino", err)
 	}
-	rutResponsable := sol.Rut + "-" + sol.Dv
+	rutResponsableDestino := tecnicoDestino.Rut + "-" + tecnicoDestino.Dv
 
 	now := time.Now()
 	traspaso.EstadoTraspaso = estado
@@ -724,7 +732,7 @@ func (s *TicketService) ResolverTraspaso(ctx context.Context, cmd ResolverTraspa
 			traz := domain.TrazabilidadTicket{
 				IDTicket:        ticket.ID,
 				CodEstadoTicket: estadoPRO.CodEstadoTicket,
-				RutResponsable:  rutResponsable,
+				RutResponsable:  rutResponsableDestino,
 			}
 			return txRepo.CreateTrazabilidad(ctx, &traz)
 		})
@@ -758,7 +766,7 @@ func (s *TicketService) ResolverTraspaso(ctx context.Context, cmd ResolverTraspa
 		trazTRA := domain.TrazabilidadTicket{
 			IDTicket:        ticket.ID,
 			CodEstadoTicket: estadoTRA.CodEstadoTicket,
-			RutResponsable:  rutResponsable,
+			RutResponsable:  rutResponsableDestino,
 		}
 		if err := txRepo.CreateTrazabilidad(ctx, &trazTRA); err != nil {
 			return err
@@ -774,15 +782,15 @@ func (s *TicketService) ResolverTraspaso(ctx context.Context, cmd ResolverTraspa
 		trazPRO := domain.TrazabilidadTicket{
 			IDTicket:        ticket.ID,
 			CodEstadoTicket: estadoPRO.CodEstadoTicket,
-			RutResponsable:  rutResponsable,
+			RutResponsable:  rutResponsableDestino,
 		}
 		return txRepo.CreateTrazabilidad(ctx, &trazPRO)
 	})
 }
 
 func (s *TicketService) ListTraspasos(ctx context.Context, q ListTraspasosQuery) (ListTraspasosResult, error) {
-	if q.IDTicket <= 0 {
-		return ListTraspasosResult{}, domain.ValidationError("id_ticket is required", nil)
+	if q.IDTecnicoDestino <= 0 {
+		return ListTraspasosResult{}, domain.ValidationError("id_tecnico_destino is required", nil)
 	}
 
 	estado := strings.TrimSpace(strings.ToUpper(q.Estado))
@@ -802,16 +810,11 @@ func (s *TicketService) ListTraspasos(ctx context.Context, q ListTraspasosQuery)
 		offset = 0
 	}
 
-	// verificar que el ticket existe
-	if _, err := s.ticketRepo.GetByID(ctx, q.IDTicket); err != nil {
-		return ListTraspasosResult{}, wrapDomainError("get ticket", err)
-	}
-
 	items, total, err := s.ticketRepo.ListTraspasos(ctx, ports.ListTraspasosFilters{
-		IDTicket: q.IDTicket,
-		Estado:   estado,
-		Limit:    limit,
-		Offset:   offset,
+		IDTecnicoDestino: q.IDTecnicoDestino,
+		Estado:           estado,
+		Limit:            limit,
+		Offset:           offset,
 	})
 	if err != nil {
 		return ListTraspasosResult{}, wrapDomainError("list traspasos", err)
@@ -873,7 +876,6 @@ func (s *TicketService) ListPausas(ctx context.Context, q ListPausasQuery) (List
 }
 
 // wrapDomainError helper para envolver errores del dominio
-
 
 func (s *TicketService) UpdateTicket(ctx context.Context, cmd UpdateTicketCommand) (domain.Ticket, error) {
 	if cmd.IDTicket <= 0 {
@@ -972,9 +974,21 @@ func (s *TicketService) ListTickets(ctx context.Context, q ListTicketsQuery) (Li
 		offset = 0
 	}
 
+	rutTecnico := ""
+	dvTecnico := ""
+	if strings.TrimSpace(q.RutTecnico) != "" {
+		var err error
+		rutTecnico, dvTecnico, err = splitRutDV(q.RutTecnico)
+		if err != nil {
+			return ListTicketsResult{}, err
+		}
+	}
+
 	items, total, err := s.ticketRepo.ListTickets(ctx, ports.ListTicketsFilters{
 		CodEstadoTicket:       strings.TrimSpace(strings.ToUpper(q.CodEstadoTicket)),
 		IDTecnicoAsignado:     q.IDTecnicoAsignado,
+		RutTecnico:            rutTecnico,
+		DVTecnico:             dvTecnico,
 		IDSolicitante:         q.IDSolicitante,
 		IDDepartamentoSoporte: q.IDDepartamentoSoporte,
 		Critico:               q.Critico,

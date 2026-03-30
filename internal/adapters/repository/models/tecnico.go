@@ -3,16 +3,17 @@ package models
 import "time"
 
 type Tecnico struct {
-	ID                    int       `gorm:"column:id;primaryKey"`
-	Rut                   string    `gorm:"column:rut;size:10;not null;uniqueIndex"`
-	Dv                    string    `gorm:"column:dv;size:1;not null"`
-	NombreCompleto        string    `gorm:"column:nombre_completo;not null"`
-	IDTipoTecnico         *int      `gorm:"column:id_tipo_tecnico"`
-	IDDepartamentoSoporte *int      `gorm:"column:id_departamento_soporte"`
-	IDTipoTurno           *int      `gorm:"column:id_tipo_turno"`
-	Estado                *bool     `gorm:"column:estado;default:true"`
-	CreatedAt             time.Time `gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt             time.Time `gorm:"column:updated_at;autoUpdateTime"`
+	ID                    int                  `gorm:"column:id;primaryKey"`
+	Rut                   string               `gorm:"column:rut;size:10;not null;uniqueIndex"`
+	Dv                    string               `gorm:"column:dv;size:1;not null"`
+	NombreCompleto        string               `gorm:"column:nombre_completo;not null"`
+	IDTipoTecnico         *int                 `gorm:"column:id_tipo_tecnico"`
+	IDDepartamentoSoporte *int                 `gorm:"column:id_departamento"`
+	IDTipoTurno           *int                 `gorm:"column:id_tipo_turno"`
+	Estado                *bool                `gorm:"column:estado;default:true"`
+	CreatedAt             time.Time            `gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt             time.Time            `gorm:"column:updated_at;autoUpdateTime"`
+	DepartamentoSoporte   *DepartamentoSoporte `gorm:"-:migration;foreignKey:IDDepartamentoSoporte;references:ID"`
 }
 
 func (Tecnico) TableName() string { return "tecnicos" }

@@ -20,39 +20,47 @@ type Ticket struct {
 	UpdatedAt             time.Time
 	FechaInicioTrabajo    *time.Time
 	FechaFinTrabajo       *time.Time
+	Solicitante           *Solicitante
+	TecnicoAsignado       *Tecnico
+	Servicio              *Servicio
+	TipoTicket            *TipoTicket
+	EstadoTicket          *EstadoTicket
+	NivelPrioridad        *NivelPrioridad
+	CatalogoFalla         *CatalogoFalla
+	DepartamentoSoporte   *DepartamentoSoporte
 }
 
 type EstadoTicket struct {
-	ID               int
-	Descripcion      string
-	CodEstadoTicket  string
+	ID              int
+	Descripcion     string
+	CodEstadoTicket string
 }
 
 type TrazabilidadTicket struct {
-	ID                 int
-	IDTicket           int
-	CodEstadoTicket    string
-	DescripcionEstado  string
-	RutResponsable     string
-	FechaTrazabilidad  time.Time
+	ID                int
+	IDTicket          int
+	CodEstadoTicket   string
+	DescripcionEstado string
+	RutResponsable    string
+	FechaTrazabilidad time.Time
 }
 
 type BitacoraTicket struct {
-	ID             int
-	IDTicket       int
-	RutAutor       string
-	Comentario     string
-	FechaRegistro  time.Time
+	ID            int
+	IDTicket      int
+	RutAutor      string
+	Comentario    string
+	FechaRegistro time.Time
 }
 
 type Valorizacion struct {
-	ID             int
-	IDTicket       int
-	IDTecnico      int
-	IDSolicitante  int
-	Nota           int
-	Comentarios    string
-	CreatedAt      time.Time
+	ID            int
+	IDTicket      int
+	IDTecnico     int
+	IDSolicitante int
+	Nota          int
+	Comentarios   string
+	CreatedAt     time.Time
 }
 
 type TicketPausa struct {
@@ -68,15 +76,15 @@ type TicketPausa struct {
 }
 
 type TicketTraspaso struct {
-	ID                    int
-	IDTicket              int
-	IDTecnicoOrigen       int
-	IDTecnicoDestino      int
-	EstadoTraspaso        string // PENDIENTE, ACEPTADO, RECHAZADO
-	Motivo                string
-	ComentarioResolucion  string
-	FechaSolicitud        time.Time
-	FechaResolucion       *time.Time
+	ID                   int
+	IDTicket             int
+	IDTecnicoOrigen      int
+	IDTecnicoDestino     int
+	EstadoTraspaso       string // PENDIENTE, ACEPTADO, RECHAZADO
+	Motivo               string
+	ComentarioResolucion string
+	FechaSolicitud       time.Time
+	FechaResolucion      *time.Time
 }
 
 type TicketDetalle struct {

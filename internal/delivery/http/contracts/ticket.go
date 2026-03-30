@@ -30,12 +30,12 @@ type AssignTicketRequest struct {
 }
 
 type AssignTicketResponse struct {
-	ID                    int    `json:"id"`
-	NroTicket             string `json:"nro_ticket"`
-	CodEstadoTicket       string `json:"cod_estado_ticket"`
-	IDTecnicoAsignado     *int   `json:"id_tecnico_asignado"`
-	IDCatalogoFalla       *int   `json:"id_catalogo_falla"`
-	IDNivelPrioridad      *int   `json:"id_nivel_prioridad"`
+	ID                int    `json:"id"`
+	NroTicket         string `json:"nro_ticket"`
+	CodEstadoTicket   string `json:"cod_estado_ticket"`
+	IDTecnicoAsignado *int   `json:"id_tecnico_asignado"`
+	IDCatalogoFalla   *int   `json:"id_catalogo_falla"`
+	IDNivelPrioridad  *int   `json:"id_nivel_prioridad"`
 }
 
 func NewAssignTicketResponse(ticket domain.Ticket) AssignTicketResponse {
@@ -63,29 +63,93 @@ type ListTicketsQuery struct {
 	Offset                int    `form:"offset"                  binding:"omitempty,gte=0"`
 	CodEstadoTicket       string `form:"estado"                  binding:"omitempty"`
 	IDTecnicoAsignado     int    `form:"id_tecnico"              binding:"omitempty,gt=0"`
+	RutTecnico            string `form:"rut_tecnico"             binding:"omitempty"`
 	IDSolicitante         int    `form:"id_solicitante"          binding:"omitempty,gt=0"`
 	IDDepartamentoSoporte int    `form:"id_departamento"         binding:"omitempty,gt=0"`
 	Critico               *bool  `form:"critico"                 binding:"omitempty"`
 }
 
+type TicketSolicitanteResponse struct {
+	ID             int    `json:"id"`
+	IDServicio     *int   `json:"id_servicio,omitempty"`
+	Correo         string `json:"correo"`
+	Rut            string `json:"rut"`
+	Dv             string `json:"dv"`
+	NombreCompleto string `json:"nombre_completo"`
+	Anexo          *int   `json:"anexo,omitempty"`
+	Estado         bool   `json:"estado"`
+}
+
+type TicketTecnicoResponse struct {
+	ID                    int    `json:"id"`
+	Rut                   string `json:"rut"`
+	Dv                    string `json:"dv"`
+	NombreCompleto        string `json:"nombre_completo"`
+	IDTipoTecnico         *int   `json:"id_tipo_tecnico,omitempty"`
+	IDDepartamentoSoporte *int   `json:"id_departamento_soporte,omitempty"`
+	IDTipoTurno           *int   `json:"id_tipo_turno,omitempty"`
+	Estado                bool   `json:"estado"`
+}
+
+type TicketServicioResponse struct {
+	ID                      int    `json:"id"`
+	Edificio                string `json:"edificio"`
+	Piso                    int    `json:"piso"`
+	Servicios               string `json:"servicios"`
+	Ubicacion               string `json:"ubicacion"`
+	Unidades                string `json:"unidades"`
+	IDNivelPrioridadDefault *int   `json:"id_nivel_prioridad_default,omitempty"`
+}
+
+type TicketTipoTicketResponse struct {
+	ID            int    `json:"id"`
+	CodTipoTicket string `json:"cod_tipo_ticket"`
+	Descripcion   string `json:"descripcion"`
+}
+
+type TicketEstadoResponse struct {
+	ID              int    `json:"id"`
+	Descripcion     string `json:"descripcion"`
+	CodEstadoTicket string `json:"cod_estado_ticket"`
+}
+
+type TicketNivelPrioridadResponse struct {
+	ID          int    `json:"id"`
+	Descripcion string `json:"descripcion"`
+}
+
+type TicketDepartamentoSoporteResponse struct {
+	ID              int    `json:"id"`
+	CodDepartamento string `json:"cod_departamento"`
+	Descripcion     string `json:"descripcion"`
+}
+
 type TicketResponse struct {
-	ID                    int     `json:"id"`
-	NroTicket             string  `json:"nro_ticket"`
-	IDSolicitante         int     `json:"id_solicitante"`
-	IDTecnicoAsignado     *int    `json:"id_tecnico_asignado"`
-	IDServicio            *int    `json:"id_servicio"`
-	IDTipoTicket          int     `json:"id_tipo_ticket"`
-	CodEstadoTicket       string  `json:"cod_estado_ticket"`
-	IDNivelPrioridad      *int    `json:"id_nivel_prioridad"`
-	IDCatalogoFalla       *int    `json:"id_catalogo_falla"`
-	IDDepartamentoSoporte *int    `json:"id_departamento_soporte"`
-	Critico               bool    `json:"critico"`
-	DetalleFallaReportada string  `json:"detalle_falla_reportada"`
-	UbicacionObs          string  `json:"ubicacion_obs"`
-	CreatedAt             string  `json:"created_at"`
-	UpdatedAt             string  `json:"updated_at"`
-	FechaInicioTrabajo    *string `json:"fecha_inicio_trabajo"`
-	FechaFinTrabajo       *string `json:"fecha_fin_trabajo"`
+	ID                    int                                `json:"id"`
+	NroTicket             string                             `json:"nro_ticket"`
+	IDSolicitante         int                                `json:"id_solicitante"`
+	IDTecnicoAsignado     *int                               `json:"id_tecnico_asignado"`
+	IDServicio            *int                               `json:"id_servicio"`
+	IDTipoTicket          int                                `json:"id_tipo_ticket"`
+	CodEstadoTicket       string                             `json:"cod_estado_ticket"`
+	IDNivelPrioridad      *int                               `json:"id_nivel_prioridad"`
+	IDCatalogoFalla       *int                               `json:"id_catalogo_falla"`
+	IDDepartamentoSoporte *int                               `json:"id_departamento_soporte"`
+	Critico               bool                               `json:"critico"`
+	DetalleFallaReportada string                             `json:"detalle_falla_reportada"`
+	UbicacionObs          string                             `json:"ubicacion_obs"`
+	CreatedAt             string                             `json:"created_at"`
+	UpdatedAt             string                             `json:"updated_at"`
+	FechaInicioTrabajo    *string                            `json:"fecha_inicio_trabajo"`
+	FechaFinTrabajo       *string                            `json:"fecha_fin_trabajo"`
+	Solicitante           *TicketSolicitanteResponse         `json:"solicitante,omitempty"`
+	TecnicoAsignado       *TicketTecnicoResponse             `json:"tecnico_asignado,omitempty"`
+	Servicio              *TicketServicioResponse            `json:"servicio,omitempty"`
+	TipoTicket            *TicketTipoTicketResponse          `json:"tipo_ticket,omitempty"`
+	EstadoTicket          *TicketEstadoResponse              `json:"estado_ticket,omitempty"`
+	NivelPrioridad        *TicketNivelPrioridadResponse      `json:"nivel_prioridad,omitempty"`
+	CatalogoFalla         *CatalogoFallaResponse             `json:"catalogo_falla,omitempty"`
+	DepartamentoSoporte   *TicketDepartamentoSoporteResponse `json:"departamento_soporte,omitempty"`
 }
 
 func NewTicketResponse(t domain.Ticket) TicketResponse {
@@ -106,6 +170,14 @@ func NewTicketResponse(t domain.Ticket) TicketResponse {
 		UbicacionObs:          t.UbicacionObs,
 		CreatedAt:             t.CreatedAt.Format(timeFmt),
 		UpdatedAt:             t.UpdatedAt.Format(timeFmt),
+		Solicitante:           newTicketSolicitanteResponse(t.Solicitante),
+		TecnicoAsignado:       newTicketTecnicoResponse(t.TecnicoAsignado),
+		Servicio:              newTicketServicioResponse(t.Servicio),
+		TipoTicket:            newTicketTipoTicketResponse(t.TipoTicket),
+		EstadoTicket:          newTicketEstadoResponse(t.EstadoTicket),
+		NivelPrioridad:        newTicketNivelPrioridadResponse(t.NivelPrioridad),
+		CatalogoFalla:         newTicketCatalogoFallaResponse(t.CatalogoFalla),
+		DepartamentoSoporte:   newTicketDepartamentoSoporteResponse(t.DepartamentoSoporte),
 	}
 	if t.FechaInicioTrabajo != nil {
 		s := t.FechaInicioTrabajo.Format(timeFmt)
@@ -239,6 +311,10 @@ type ResolverTraspasoRequest struct {
 	ComentarioResolucion string `json:"comentario_resolucion"`
 }
 
+type ResolverTraspasoQuery struct {
+	IDTecnicoDestino int `form:"id_tecnico_destino" binding:"required,gt=0"`
+}
+
 type ListTraspasosQuery struct {
 	Limit  int    `form:"limit"  binding:"omitempty,gt=0,lte=100"`
 	Offset int    `form:"offset" binding:"omitempty,gte=0"`
@@ -308,34 +384,42 @@ func NewBitacoraResponse(b domain.BitacoraTicket) BitacoraResponse {
 }
 
 type TrazabilidadResponse struct {
-	ID                 int    `json:"id"`
-	IDTicket           int    `json:"id_ticket"`
-	CodEstadoTicket    string `json:"cod_estado_ticket"`
-	DescripcionEstado  string `json:"descripcion_estado"`
-	RutResponsable     string `json:"rut_responsable"`
-	FechaTrazabilidad  string `json:"fecha_trazabilidad"`
+	ID                int    `json:"id"`
+	IDTicket          int    `json:"id_ticket"`
+	CodEstadoTicket   string `json:"cod_estado_ticket"`
+	DescripcionEstado string `json:"descripcion_estado"`
+	RutResponsable    string `json:"rut_responsable"`
+	FechaTrazabilidad string `json:"fecha_trazabilidad"`
 }
 
 type TicketDetalleResponse struct {
-	ID                    int                     `json:"id"`
-	NroTicket             string                  `json:"nro_ticket"`
-	IDSolicitante         int                     `json:"id_solicitante"`
-	IDTecnicoAsignado     *int                    `json:"id_tecnico_asignado"`
-	IDServicio            *int                    `json:"id_servicio"`
-	IDTipoTicket          int                     `json:"id_tipo_ticket"`
-	CodEstadoTicket       string                  `json:"cod_estado_ticket"`
-	IDNivelPrioridad      *int                    `json:"id_nivel_prioridad"`
-	IDCatalogoFalla       *int                    `json:"id_catalogo_falla"`
-	IDDepartamentoSoporte *int                    `json:"id_departamento_soporte"`
-	Critico               bool                    `json:"critico"`
-	DetalleFallaReportada string                  `json:"detalle_falla_reportada"`
-	UbicacionObs          string                  `json:"ubicacion_obs"`
-	CreatedAt             string                  `json:"created_at"`
-	UpdatedAt             string                  `json:"updated_at"`
-	FechaInicioTrabajo    *string                 `json:"fecha_inicio_trabajo"`
-	FechaFinTrabajo       *string                 `json:"fecha_fin_trabajo"`
-	Trazabilidad          []TrazabilidadResponse  `json:"trazabilidad"`
-	Bitacora              []BitacoraResponse      `json:"bitacora"`
+	ID                    int                                `json:"id"`
+	NroTicket             string                             `json:"nro_ticket"`
+	IDSolicitante         int                                `json:"id_solicitante"`
+	IDTecnicoAsignado     *int                               `json:"id_tecnico_asignado"`
+	IDServicio            *int                               `json:"id_servicio"`
+	IDTipoTicket          int                                `json:"id_tipo_ticket"`
+	CodEstadoTicket       string                             `json:"cod_estado_ticket"`
+	IDNivelPrioridad      *int                               `json:"id_nivel_prioridad"`
+	IDCatalogoFalla       *int                               `json:"id_catalogo_falla"`
+	IDDepartamentoSoporte *int                               `json:"id_departamento_soporte"`
+	Critico               bool                               `json:"critico"`
+	DetalleFallaReportada string                             `json:"detalle_falla_reportada"`
+	UbicacionObs          string                             `json:"ubicacion_obs"`
+	CreatedAt             string                             `json:"created_at"`
+	UpdatedAt             string                             `json:"updated_at"`
+	FechaInicioTrabajo    *string                            `json:"fecha_inicio_trabajo"`
+	FechaFinTrabajo       *string                            `json:"fecha_fin_trabajo"`
+	Solicitante           *TicketSolicitanteResponse         `json:"solicitante,omitempty"`
+	TecnicoAsignado       *TicketTecnicoResponse             `json:"tecnico_asignado,omitempty"`
+	Servicio              *TicketServicioResponse            `json:"servicio,omitempty"`
+	TipoTicket            *TicketTipoTicketResponse          `json:"tipo_ticket,omitempty"`
+	EstadoTicket          *TicketEstadoResponse              `json:"estado_ticket,omitempty"`
+	NivelPrioridad        *TicketNivelPrioridadResponse      `json:"nivel_prioridad,omitempty"`
+	CatalogoFalla         *CatalogoFallaResponse             `json:"catalogo_falla,omitempty"`
+	DepartamentoSoporte   *TicketDepartamentoSoporteResponse `json:"departamento_soporte,omitempty"`
+	Trazabilidad          []TrazabilidadResponse             `json:"trazabilidad"`
+	Bitacora              []BitacoraResponse                 `json:"bitacora"`
 }
 
 func NewTicketDetalleResponse(d domain.TicketDetalle) TicketDetalleResponse {
@@ -374,6 +458,14 @@ func NewTicketDetalleResponse(d domain.TicketDetalle) TicketDetalleResponse {
 		UbicacionObs:          d.Ticket.UbicacionObs,
 		CreatedAt:             d.Ticket.CreatedAt.Format(timeFmt),
 		UpdatedAt:             d.Ticket.UpdatedAt.Format(timeFmt),
+		Solicitante:           newTicketSolicitanteResponse(d.Ticket.Solicitante),
+		TecnicoAsignado:       newTicketTecnicoResponse(d.Ticket.TecnicoAsignado),
+		Servicio:              newTicketServicioResponse(d.Ticket.Servicio),
+		TipoTicket:            newTicketTipoTicketResponse(d.Ticket.TipoTicket),
+		EstadoTicket:          newTicketEstadoResponse(d.Ticket.EstadoTicket),
+		NivelPrioridad:        newTicketNivelPrioridadResponse(d.Ticket.NivelPrioridad),
+		CatalogoFalla:         newTicketCatalogoFallaResponse(d.Ticket.CatalogoFalla),
+		DepartamentoSoporte:   newTicketDepartamentoSoporteResponse(d.Ticket.DepartamentoSoporte),
 		Trazabilidad:          trazabilidad,
 		Bitacora:              bitacora,
 	}
@@ -388,4 +480,102 @@ func NewTicketDetalleResponse(d domain.TicketDetalle) TicketDetalleResponse {
 	}
 
 	return resp
+}
+
+func newTicketSolicitanteResponse(sol *domain.Solicitante) *TicketSolicitanteResponse {
+	if sol == nil {
+		return nil
+	}
+	return &TicketSolicitanteResponse{
+		ID:             sol.ID,
+		IDServicio:     sol.IDServicio,
+		Correo:         sol.Correo,
+		Rut:            sol.Rut,
+		Dv:             sol.Dv,
+		NombreCompleto: sol.NombreCompleto,
+		Anexo:          sol.Anexo,
+		Estado:         sol.Estado,
+	}
+}
+
+func newTicketTecnicoResponse(t *domain.Tecnico) *TicketTecnicoResponse {
+	if t == nil {
+		return nil
+	}
+	return &TicketTecnicoResponse{
+		ID:                    t.ID,
+		Rut:                   t.Rut,
+		Dv:                    t.Dv,
+		NombreCompleto:        t.NombreCompleto,
+		IDTipoTecnico:         t.IDTipoTecnico,
+		IDDepartamentoSoporte: t.IDDepartamentoSoporte,
+		IDTipoTurno:           t.IDTipoTurno,
+		Estado:                t.Estado,
+	}
+}
+
+func newTicketServicioResponse(s *domain.Servicio) *TicketServicioResponse {
+	if s == nil {
+		return nil
+	}
+	return &TicketServicioResponse{
+		ID:                      s.ID,
+		Edificio:                s.Edificio,
+		Piso:                    s.Piso,
+		Servicios:               s.Servicios,
+		Ubicacion:               s.Ubicacion,
+		Unidades:                s.Unidades,
+		IDNivelPrioridadDefault: s.IDNivelPrioridadDefault,
+	}
+}
+
+func newTicketTipoTicketResponse(t *domain.TipoTicket) *TicketTipoTicketResponse {
+	if t == nil {
+		return nil
+	}
+	return &TicketTipoTicketResponse{
+		ID:            t.ID,
+		CodTipoTicket: t.CodTipoTicket,
+		Descripcion:   t.Descripcion,
+	}
+}
+
+func newTicketEstadoResponse(e *domain.EstadoTicket) *TicketEstadoResponse {
+	if e == nil {
+		return nil
+	}
+	return &TicketEstadoResponse{
+		ID:              e.ID,
+		Descripcion:     e.Descripcion,
+		CodEstadoTicket: e.CodEstadoTicket,
+	}
+}
+
+func newTicketNivelPrioridadResponse(n *domain.NivelPrioridad) *TicketNivelPrioridadResponse {
+	if n == nil {
+		return nil
+	}
+	return &TicketNivelPrioridadResponse{
+		ID:          n.ID,
+		Descripcion: n.Descripcion,
+	}
+}
+
+func newTicketCatalogoFallaResponse(f *domain.CatalogoFalla) *CatalogoFallaResponse {
+	if f == nil {
+		return nil
+	}
+	resp := NewCatalogoFallaResponse(*f)
+	return &resp
+}
+
+func newTicketDepartamentoSoporteResponse(d *domain.DepartamentoSoporte) *TicketDepartamentoSoporteResponse {
+	if d == nil {
+		return nil
+	}
+	return &TicketDepartamentoSoporteResponse{
+		ID:              d.ID,
+		CodDepartamento: d.CodDepartamento,
+		Descripcion:     d.Descripcion,
+	}
 }
