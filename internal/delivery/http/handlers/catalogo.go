@@ -282,18 +282,3 @@ func (h CatalogoHandler) UpdateTipoTurno(c *gin.Context) {
 	json(c, http.StatusOK, item)
 }
 
-// --- helpers ---
-
-func ptrOrDefault[T any](p *T, def T) T {
-	if p == nil {
-		return def
-	}
-	return *p
-}
-
-func ptrOrStr(p *string) string {
-	if p == nil {
-		return ""
-	}
-	return *p
-}

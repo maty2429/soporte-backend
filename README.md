@@ -358,9 +358,116 @@ Para agregar un recurso nuevo, el orden recomendado es:
 
 ## Pendiente
 
-1. Autenticación y autorización (JWT, roles).
-2. Rate limit distribuido con Redis (para múltiples instancias).
-3. Gestión segura de secretos (vault, secrets manager).
-4. Cache con Redis para respuestas frecuentes.
-5. OpenTelemetry para tracing distribuido.
-6. Audit log de operaciones (quién hizo qué y cuándo).
+### 1. Autenticación y autorización con SSO (prioritario)
+
+#### Cómo funciona el flujo completo
+
+El sistema de autenticación se basa en **OAuth 2.0 + JWT con RS256**. Es el mismo patrón que usan empresas como Google, GitHub y Auth0.
+
+```
+[Usuario]
+    │
+    │ 1. Hace login en soporte-next (frontend)
+    ▼
+[soporte-next frontend]
+    │
+    │ 2. Redirige al SSO web, el usuario se autentica ahí
+    │ 3. El SSO genera un JWT firmado con su llave privada RSA
+    │ 4. soporte-next recibe el token y lo guarda en una cookie httpOnly
+    ▼
+[Usuario navega y realiza una acción, ej: crear un ticket]
+    │
+    │ 5. soporte-next hace una petición HTTP a este backend:
+    │    POST /api/tickets
+    │    Authorization: Bearer eyJhbGc...   ← el token que dio el SSO
+    ▼
+[Este backend - tren]
+    │
+    │ 6. Recibe el request con el token en el header
+    │ 7. Extrae el token del header Authorization
+    │ 8. Verifica la firma del token usando la llave pública del SSO
+    │    (ver opciones abajo)
+    │ 9. Verifica que: firma válida + no expirado + issuer = "sso"
+    │
+    ├── Si NO es válido → responde 401 Unauthorized
+    │
+    └── Si ES válido → extrae los datos del payload (user_id, roles, etc.)
+            │
+            │ 10. Procesa el request con la identidad del usuario
+            ▼
+        Devuelve la respuesta al frontend
+```
+
+#### Por qué es seguro
+
+- El SSO firma los tokens con su **llave privada RSA** — solo él puede crearlos
+- Este backend solo necesita la **llave pública** para verificar que son auténticos
+- **Nunca se llama al SSO en cada request** — la verificación es local y sin latencia
+- Si alguien modifica el payload del token, la firma deja de ser válida → 401
+
+#### Cómo obtener la llave pública del SSO
+
+**Opción A — llave pública en variable de entorno (recomendada para este proyecto)**
+
+Copiar la llave pública RSA del SSO y pegarla en el `.env` del backend:
+
+```env
+SSO_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+-----END PUBLIC KEY-----"
+```
+
+Ventajas: sin dependencia de red, más simple de implementar.
+Desventaja: si el SSO rota su llave RSA, hay que actualizar el `.env` y redesplegar.
+
+**Opción B — JWKS endpoint (automático)**
+
+El SSO expone sus llaves públicas en:
+```
+GET https://api.matielpulento.cl/.well-known/jwks.json
+```
+El backend descarga la llave una vez, la cachea en memoria y la renueva automáticamente.
+
+Ventajas: rotación de llaves transparente.
+Desventaja: levemente más compleja de implementar.
+
+Para este proyecto la **Opción A es suficiente**.
+
+#### Qué hay que implementar
+
+1. **Variable de entorno**: agregar `SSO_JWT_PUBLIC_KEY` (o ruta a archivo `.pem`) en `config.go`
+2. **Middleware JWT**: nuevo archivo `internal/delivery/http/middlewares/jwt.go`
+   - Leer el header `Authorization: Bearer <token>`
+   - Parsear y verificar el JWT con la llave pública RSA usando `golang-jwt/jwt`
+   - Verificar `issuer = "sso"` y que no esté expirado
+   - Inyectar los claims en el contexto de Gin: `c.Set("user_id", claims.Sub)`
+3. **Claims esperados del SSO**:
+   ```go
+   type SSOClaims struct {
+       Sub         string `json:"sub"`          // UUID del usuario
+       FullName    string `json:"full_name"`
+       Rut         string `json:"rut"`
+       Email       string `json:"email"`
+       ProjectCode string `json:"project_code"` // debe ser "SOPORTE"
+       Roles       []int  `json:"roles"`
+       IsAdmin     bool   `json:"is_admin"`
+       jwt.RegisteredClaims
+   }
+   ```
+4. **Aplicar el middleware** en las rutas protegidas dentro de `routes.go`
+5. **Helper de contexto**: función `GetCurrentUser(c *gin.Context) SSOClaims` para usar en handlers
+6. **Middleware de roles**: opcional, verificar que el usuario tenga el rol necesario para cada endpoint
+
+#### Librería recomendada
+
+```bash
+go get github.com/golang-jwt/jwt/v5
+```
+
+---
+
+### 2. Rate limit distribuido con Redis (para múltiples instancias)
+### 3. Gestión segura de secretos (vault, secrets manager)
+### 4. Cache con Redis para respuestas frecuentes
+### 5. OpenTelemetry para tracing distribuido
+### 6. Audit log de operaciones (quién hizo qué y cuándo)

@@ -3,9 +3,7 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
-	"unicode"
 
 	"gorm.io/gorm"
 
@@ -22,14 +20,11 @@ func NewSolicitanteService(repo ports.SolicitanteRepository) *SolicitanteService
 }
 
 func (s *SolicitanteService) List(ctx context.Context, query ListSolicitantesQuery) (ListSolicitantesResult, error) {
-	limit := query.Limit
-	if limit == 0 {
-		limit = DefaultListLimit
-	}
+	limit, offset := normalizePagination(query.Limit, query.Offset)
 
 	items, total, err := s.repo.List(ctx, ports.ListSolicitantesFilters{
 		Limit:  limit,
-		Offset: query.Offset,
+		Offset: offset,
 		Search: strings.TrimSpace(query.Search),
 		Estado: query.Estado,
 	})
@@ -45,7 +40,7 @@ func (s *SolicitanteService) List(ctx context.Context, query ListSolicitantesQue
 		Items:  items,
 		Total:  total,
 		Limit:  limit,
-		Offset: query.Offset,
+		Offset: offset,
 	}, nil
 }
 
@@ -173,37 +168,3 @@ func (s *SolicitanteService) Update(ctx context.Context, command UpdateSolicitan
 	return sol, nil
 }
 
-func isDuplicateKeyError(err error) bool {
-	if errors.Is(err, gorm.ErrDuplicatedKey) {
-		return true
-	}
-	lower := strings.ToLower(err.Error())
-	return strings.Contains(lower, "duplicate key") || strings.Contains(lower, "unique constraint")
-}
-
-func splitRutDV(raw string) (string, string, error) {
-	normalized := strings.ToUpper(strings.TrimSpace(raw))
-	normalized = strings.ReplaceAll(normalized, ".", "")
-	normalized = strings.ReplaceAll(normalized, "-", "")
-	normalized = strings.ReplaceAll(normalized, " ", "")
-
-	if len(normalized) < 2 {
-		return "", "", domain.ValidationError("rut must include number and dv", nil)
-	}
-
-	runes := []rune(normalized)
-	rut := string(runes[:len(runes)-1])
-	dv := string(runes[len(runes)-1])
-
-	for _, r := range rut {
-		if !unicode.IsDigit(r) {
-			return "", "", domain.ValidationError("rut must contain only digits before dv", nil)
-		}
-	}
-
-	if !unicode.IsDigit(runes[len(runes)-1]) && runes[len(runes)-1] != 'K' {
-		return "", "", domain.ValidationError(fmt.Sprintf("dv '%s' is invalid", dv), nil)
-	}
-
-	return rut, dv, nil
-}

@@ -21,41 +21,45 @@ func NewCatalogoRepository(db *gorm.DB) ports.CatalogoRepository {
 	return &CatalogoRepository{db: db}
 }
 
-// ==================== tipos_ticket ====================
-
-func (r *CatalogoRepository) ListTiposTicket(ctx context.Context) ([]domain.TipoTicket, error) {
-	var rows []models.TipoTicket
-	if err := r.db.WithContext(ctx).Order("id ASC").Find(&rows).Error; err != nil {
-		return nil, wrapListError("tipo ticket", err)
+// listCatalogo is a generic helper for ordering and scanning catalog tables.
+func listCatalogo[M any, D any](db *gorm.DB, ctx context.Context, resource string, mapFn func(M) D) ([]D, error) {
+	var rows []M
+	if err := db.WithContext(ctx).Order("id ASC").Find(&rows).Error; err != nil {
+		return nil, wrapListError(resource, err)
 	}
-	items := make([]domain.TipoTicket, 0, len(rows))
+	items := make([]D, 0, len(rows))
 	for _, row := range rows {
-		items = append(items, domain.TipoTicket{
-			ID:            row.ID,
-			CodTipoTicket: row.CodTipoTicket,
-			Descripcion:   row.Descripcion,
-		})
+		items = append(items, mapFn(row))
 	}
 	return items, nil
 }
 
-func (r *CatalogoRepository) GetTipoTicketByID(ctx context.Context, id int) (domain.TipoTicket, error) {
-	var row models.TipoTicket
-	if err := r.db.WithContext(ctx).Where("id = ?", id).Take(&row).Error; err != nil {
-		return domain.TipoTicket{}, wrapDBError("tipo ticket", err)
+// getCatalogoByID is a generic helper for fetching a catalog row by primary key.
+func getCatalogoByID[M any, D any](db *gorm.DB, ctx context.Context, id int, resource string, mapFn func(M) D) (D, error) {
+	var row M
+	if err := db.WithContext(ctx).Where("id = ?", id).Take(&row).Error; err != nil {
+		var zero D
+		return zero, wrapDBError(resource, err)
 	}
-	return domain.TipoTicket{
-		ID:            row.ID,
-		CodTipoTicket: row.CodTipoTicket,
-		Descripcion:   row.Descripcion,
-	}, nil
+	return mapFn(row), nil
+}
+
+// ==================== tipos_ticket ====================
+
+func (r *CatalogoRepository) ListTiposTicket(ctx context.Context) ([]domain.TipoTicket, error) {
+	return listCatalogo(r.db, ctx, "tipo ticket", func(row models.TipoTicket) domain.TipoTicket {
+		return domain.TipoTicket{ID: row.ID, CodTipoTicket: row.CodTipoTicket, Descripcion: row.Descripcion}
+	})
+}
+
+func (r *CatalogoRepository) GetTipoTicketByID(ctx context.Context, id int) (domain.TipoTicket, error) {
+	return getCatalogoByID(r.db, ctx, id, "tipo ticket", func(row models.TipoTicket) domain.TipoTicket {
+		return domain.TipoTicket{ID: row.ID, CodTipoTicket: row.CodTipoTicket, Descripcion: row.Descripcion}
+	})
 }
 
 func (r *CatalogoRepository) CreateTipoTicket(ctx context.Context, item *domain.TipoTicket) error {
-	row := models.TipoTicket{
-		CodTipoTicket: item.CodTipoTicket,
-		Descripcion:   item.Descripcion,
-	}
+	row := models.TipoTicket{CodTipoTicket: item.CodTipoTicket, Descripcion: item.Descripcion}
 	if err := r.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return wrapCreateError("tipo ticket", err)
 	}
@@ -71,42 +75,25 @@ func (r *CatalogoRepository) UpdateTipoTicket(ctx context.Context, item *domain.
 	if item.Descripcion != "" {
 		updates["descripcion"] = item.Descripcion
 	}
-	err := r.db.WithContext(ctx).Model(&models.TipoTicket{}).Where("id = ?", item.ID).Updates(updates).Error
-	return wrapUpdateError("tipo ticket", err)
+	return wrapUpdateError("tipo ticket", r.db.WithContext(ctx).Model(&models.TipoTicket{}).Where("id = ?", item.ID).Updates(updates).Error)
 }
 
 // ==================== niveles_prioridad ====================
 
 func (r *CatalogoRepository) ListNivelesPrioridad(ctx context.Context) ([]domain.NivelPrioridad, error) {
-	var rows []models.NivelPrioridad
-	if err := r.db.WithContext(ctx).Order("id ASC").Find(&rows).Error; err != nil {
-		return nil, wrapListError("nivel de prioridad", err)
-	}
-	items := make([]domain.NivelPrioridad, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, domain.NivelPrioridad{
-			ID:          row.ID,
-			Descripcion: row.Descripcion,
-		})
-	}
-	return items, nil
+	return listCatalogo(r.db, ctx, "nivel de prioridad", func(row models.NivelPrioridad) domain.NivelPrioridad {
+		return domain.NivelPrioridad{ID: row.ID, Descripcion: row.Descripcion}
+	})
 }
 
 func (r *CatalogoRepository) GetNivelPrioridadByID(ctx context.Context, id int) (domain.NivelPrioridad, error) {
-	var row models.NivelPrioridad
-	if err := r.db.WithContext(ctx).Where("id = ?", id).Take(&row).Error; err != nil {
-		return domain.NivelPrioridad{}, wrapDBError("nivel de prioridad", err)
-	}
-	return domain.NivelPrioridad{
-		ID:          row.ID,
-		Descripcion: row.Descripcion,
-	}, nil
+	return getCatalogoByID(r.db, ctx, id, "nivel de prioridad", func(row models.NivelPrioridad) domain.NivelPrioridad {
+		return domain.NivelPrioridad{ID: row.ID, Descripcion: row.Descripcion}
+	})
 }
 
 func (r *CatalogoRepository) CreateNivelPrioridad(ctx context.Context, item *domain.NivelPrioridad) error {
-	row := models.NivelPrioridad{
-		Descripcion: item.Descripcion,
-	}
+	row := models.NivelPrioridad{Descripcion: item.Descripcion}
 	if err := r.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return wrapCreateError("nivel de prioridad", err)
 	}
@@ -119,42 +106,25 @@ func (r *CatalogoRepository) UpdateNivelPrioridad(ctx context.Context, item *dom
 	if item.Descripcion != "" {
 		updates["descripcion"] = item.Descripcion
 	}
-	err := r.db.WithContext(ctx).Model(&models.NivelPrioridad{}).Where("id = ?", item.ID).Updates(updates).Error
-	return wrapUpdateError("nivel de prioridad", err)
+	return wrapUpdateError("nivel de prioridad", r.db.WithContext(ctx).Model(&models.NivelPrioridad{}).Where("id = ?", item.ID).Updates(updates).Error)
 }
 
 // ==================== tipo_tecnico ====================
 
 func (r *CatalogoRepository) ListTiposTecnico(ctx context.Context) ([]domain.TipoTecnico, error) {
-	var rows []models.TipoTecnico
-	if err := r.db.WithContext(ctx).Order("id ASC").Find(&rows).Error; err != nil {
-		return nil, wrapListError("tipo técnico", err)
-	}
-	items := make([]domain.TipoTecnico, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, domain.TipoTecnico{
-			ID:          row.ID,
-			Descripcion: row.Descripcion,
-		})
-	}
-	return items, nil
+	return listCatalogo(r.db, ctx, "tipo técnico", func(row models.TipoTecnico) domain.TipoTecnico {
+		return domain.TipoTecnico{ID: row.ID, Descripcion: row.Descripcion}
+	})
 }
 
 func (r *CatalogoRepository) GetTipoTecnicoByID(ctx context.Context, id int) (domain.TipoTecnico, error) {
-	var row models.TipoTecnico
-	if err := r.db.WithContext(ctx).Where("id = ?", id).Take(&row).Error; err != nil {
-		return domain.TipoTecnico{}, wrapDBError("tipo técnico", err)
-	}
-	return domain.TipoTecnico{
-		ID:          row.ID,
-		Descripcion: row.Descripcion,
-	}, nil
+	return getCatalogoByID(r.db, ctx, id, "tipo técnico", func(row models.TipoTecnico) domain.TipoTecnico {
+		return domain.TipoTecnico{ID: row.ID, Descripcion: row.Descripcion}
+	})
 }
 
 func (r *CatalogoRepository) CreateTipoTecnico(ctx context.Context, item *domain.TipoTecnico) error {
-	row := models.TipoTecnico{
-		Descripcion: item.Descripcion,
-	}
+	row := models.TipoTecnico{Descripcion: item.Descripcion}
 	if err := r.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return wrapCreateError("tipo técnico", err)
 	}
@@ -167,45 +137,25 @@ func (r *CatalogoRepository) UpdateTipoTecnico(ctx context.Context, item *domain
 	if item.Descripcion != "" {
 		updates["descripcion"] = item.Descripcion
 	}
-	err := r.db.WithContext(ctx).Model(&models.TipoTecnico{}).Where("id = ?", item.ID).Updates(updates).Error
-	return wrapUpdateError("tipo técnico", err)
+	return wrapUpdateError("tipo técnico", r.db.WithContext(ctx).Model(&models.TipoTecnico{}).Where("id = ?", item.ID).Updates(updates).Error)
 }
 
 // ==================== departamentos_soporte ====================
 
 func (r *CatalogoRepository) ListDepartamentosSoporte(ctx context.Context) ([]domain.DepartamentoSoporte, error) {
-	var rows []models.DepartamentoSoporte
-	if err := r.db.WithContext(ctx).Order("id ASC").Find(&rows).Error; err != nil {
-		return nil, wrapListError("departamento de soporte", err)
-	}
-	items := make([]domain.DepartamentoSoporte, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, domain.DepartamentoSoporte{
-			ID:              row.ID,
-			CodDepartamento: row.CodDepartamento,
-			Descripcion:     row.Descripcion,
-		})
-	}
-	return items, nil
+	return listCatalogo(r.db, ctx, "departamento de soporte", func(row models.DepartamentoSoporte) domain.DepartamentoSoporte {
+		return domain.DepartamentoSoporte{ID: row.ID, CodDepartamento: row.CodDepartamento, Descripcion: row.Descripcion}
+	})
 }
 
 func (r *CatalogoRepository) GetDepartamentoSoporteByID(ctx context.Context, id int) (domain.DepartamentoSoporte, error) {
-	var row models.DepartamentoSoporte
-	if err := r.db.WithContext(ctx).Where("id = ?", id).Take(&row).Error; err != nil {
-		return domain.DepartamentoSoporte{}, wrapDBError("departamento de soporte", err)
-	}
-	return domain.DepartamentoSoporte{
-		ID:              row.ID,
-		CodDepartamento: row.CodDepartamento,
-		Descripcion:     row.Descripcion,
-	}, nil
+	return getCatalogoByID(r.db, ctx, id, "departamento de soporte", func(row models.DepartamentoSoporte) domain.DepartamentoSoporte {
+		return domain.DepartamentoSoporte{ID: row.ID, CodDepartamento: row.CodDepartamento, Descripcion: row.Descripcion}
+	})
 }
 
 func (r *CatalogoRepository) CreateDepartamentoSoporte(ctx context.Context, item *domain.DepartamentoSoporte) error {
-	row := models.DepartamentoSoporte{
-		CodDepartamento: item.CodDepartamento,
-		Descripcion:     item.Descripcion,
-	}
+	row := models.DepartamentoSoporte{CodDepartamento: item.CodDepartamento, Descripcion: item.Descripcion}
 	if err := r.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return wrapCreateError("departamento de soporte", err)
 	}
@@ -221,45 +171,25 @@ func (r *CatalogoRepository) UpdateDepartamentoSoporte(ctx context.Context, item
 	if item.Descripcion != "" {
 		updates["descripcion"] = item.Descripcion
 	}
-	err := r.db.WithContext(ctx).Model(&models.DepartamentoSoporte{}).Where("id = ?", item.ID).Updates(updates).Error
-	return wrapUpdateError("departamento de soporte", err)
+	return wrapUpdateError("departamento de soporte", r.db.WithContext(ctx).Model(&models.DepartamentoSoporte{}).Where("id = ?", item.ID).Updates(updates).Error)
 }
 
 // ==================== motivos_pausa ====================
 
 func (r *CatalogoRepository) ListMotivosPausa(ctx context.Context) ([]domain.MotivoPausa, error) {
-	var rows []models.MotivoPausa
-	if err := r.db.WithContext(ctx).Order("id ASC").Find(&rows).Error; err != nil {
-		return nil, wrapListError("motivo de pausa", err)
-	}
-	items := make([]domain.MotivoPausa, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, domain.MotivoPausa{
-			ID:                   row.ID,
-			MotivoPausa:          row.MotivoPausa,
-			RequiereAutorizacion: derefBool(row.RequiereAutorizacion),
-		})
-	}
-	return items, nil
+	return listCatalogo(r.db, ctx, "motivo de pausa", func(row models.MotivoPausa) domain.MotivoPausa {
+		return domain.MotivoPausa{ID: row.ID, MotivoPausa: row.MotivoPausa, RequiereAutorizacion: derefBool(row.RequiereAutorizacion)}
+	})
 }
 
 func (r *CatalogoRepository) GetMotivoPausaByID(ctx context.Context, id int) (domain.MotivoPausa, error) {
-	var row models.MotivoPausa
-	if err := r.db.WithContext(ctx).Where("id = ?", id).Take(&row).Error; err != nil {
-		return domain.MotivoPausa{}, wrapDBError("motivo de pausa", err)
-	}
-	return domain.MotivoPausa{
-		ID:                   row.ID,
-		MotivoPausa:          row.MotivoPausa,
-		RequiereAutorizacion: derefBool(row.RequiereAutorizacion),
-	}, nil
+	return getCatalogoByID(r.db, ctx, id, "motivo de pausa", func(row models.MotivoPausa) domain.MotivoPausa {
+		return domain.MotivoPausa{ID: row.ID, MotivoPausa: row.MotivoPausa, RequiereAutorizacion: derefBool(row.RequiereAutorizacion)}
+	})
 }
 
 func (r *CatalogoRepository) CreateMotivoPausa(ctx context.Context, item *domain.MotivoPausa) error {
-	row := models.MotivoPausa{
-		MotivoPausa:          item.MotivoPausa,
-		RequiereAutorizacion: &item.RequiereAutorizacion,
-	}
+	row := models.MotivoPausa{MotivoPausa: item.MotivoPausa, RequiereAutorizacion: &item.RequiereAutorizacion}
 	if err := r.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return wrapCreateError("motivo de pausa", err)
 	}
@@ -274,48 +204,25 @@ func (r *CatalogoRepository) UpdateMotivoPausa(ctx context.Context, item *domain
 	if item.MotivoPausa != "" {
 		updates["motivo_pausa"] = item.MotivoPausa
 	}
-	err := r.db.WithContext(ctx).Model(&models.MotivoPausa{}).Where("id = ?", item.ID).Updates(updates).Error
-	return wrapUpdateError("motivo de pausa", err)
+	return wrapUpdateError("motivo de pausa", r.db.WithContext(ctx).Model(&models.MotivoPausa{}).Where("id = ?", item.ID).Updates(updates).Error)
 }
 
 // ==================== tipos_turno ====================
 
 func (r *CatalogoRepository) ListTiposTurno(ctx context.Context) ([]domain.TipoTurno, error) {
-	var rows []models.TipoTurno
-	if err := r.db.WithContext(ctx).Order("id ASC").Find(&rows).Error; err != nil {
-		return nil, wrapListError("tipo de turno", err)
-	}
-	items := make([]domain.TipoTurno, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, domain.TipoTurno{
-			ID:          row.ID,
-			Nombre:      row.Nombre,
-			Descripcion: row.Descripcion,
-			Estado:      derefBool(row.Estado),
-		})
-	}
-	return items, nil
+	return listCatalogo(r.db, ctx, "tipo de turno", func(row models.TipoTurno) domain.TipoTurno {
+		return domain.TipoTurno{ID: row.ID, Nombre: row.Nombre, Descripcion: row.Descripcion, Estado: derefBool(row.Estado)}
+	})
 }
 
 func (r *CatalogoRepository) GetTipoTurnoByID(ctx context.Context, id int) (domain.TipoTurno, error) {
-	var row models.TipoTurno
-	if err := r.db.WithContext(ctx).Where("id = ?", id).Take(&row).Error; err != nil {
-		return domain.TipoTurno{}, wrapDBError("tipo de turno", err)
-	}
-	return domain.TipoTurno{
-		ID:          row.ID,
-		Nombre:      row.Nombre,
-		Descripcion: row.Descripcion,
-		Estado:      derefBool(row.Estado),
-	}, nil
+	return getCatalogoByID(r.db, ctx, id, "tipo de turno", func(row models.TipoTurno) domain.TipoTurno {
+		return domain.TipoTurno{ID: row.ID, Nombre: row.Nombre, Descripcion: row.Descripcion, Estado: derefBool(row.Estado)}
+	})
 }
 
 func (r *CatalogoRepository) CreateTipoTurno(ctx context.Context, item *domain.TipoTurno) error {
-	row := models.TipoTurno{
-		Nombre:      item.Nombre,
-		Descripcion: item.Descripcion,
-		Estado:      &item.Estado,
-	}
+	row := models.TipoTurno{Nombre: item.Nombre, Descripcion: item.Descripcion, Estado: &item.Estado}
 	if err := r.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return wrapCreateError("tipo de turno", err)
 	}
@@ -333,15 +240,5 @@ func (r *CatalogoRepository) UpdateTipoTurno(ctx context.Context, item *domain.T
 	if item.Descripcion != "" {
 		updates["descripcion"] = item.Descripcion
 	}
-	err := r.db.WithContext(ctx).Model(&models.TipoTurno{}).Where("id = ?", item.ID).Updates(updates).Error
-	return wrapUpdateError("tipo de turno", err)
-}
-
-// --- helpers ---
-
-func derefBool(b *bool) bool {
-	if b == nil {
-		return false
-	}
-	return *b
+	return wrapUpdateError("tipo de turno", r.db.WithContext(ctx).Model(&models.TipoTurno{}).Where("id = ?", item.ID).Updates(updates).Error)
 }

@@ -184,6 +184,14 @@ func isContextError(err error) bool {
 	return errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled)
 }
 
+// derefBool safely dereferences a *bool, returning false if nil.
+func derefBool(b *bool) bool {
+	if b == nil {
+		return false
+	}
+	return *b
+}
+
 // isConnectionError reports whether the error is a database connectivity failure.
 // Covers: connection refused, dropped connections, bad connections from the pool,
 // and broken pipes — all of which indicate the DB is unreachable at runtime.

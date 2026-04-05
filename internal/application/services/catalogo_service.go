@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"soporte/internal/core/domain"
@@ -346,12 +345,3 @@ func (s *CatalogoService) UpdateTipoTurno(ctx context.Context, id int, nombre *s
 	return existing, nil
 }
 
-// --- helper ---
-
-func wrapServiceError(op string, err error) error {
-	var appErr *domain.Error
-	if errors.As(err, &appErr) {
-		return err
-	}
-	return domain.InternalError(op, err)
-}

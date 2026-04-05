@@ -20,17 +20,7 @@ func NewTecnicoService(repo ports.TecnicoRepository) *TecnicoService {
 }
 
 func (s *TecnicoService) List(ctx context.Context, q ListTecnicosQuery) (ListTecnicosResult, error) {
-	limit := q.Limit
-	if limit <= 0 {
-		limit = DefaultListLimit
-	}
-	if limit > MaxListLimit {
-		limit = MaxListLimit
-	}
-	offset := q.Offset
-	if offset < 0 {
-		offset = 0
-	}
+	limit, offset := normalizePagination(q.Limit, q.Offset)
 
 	items, total, err := s.repo.List(ctx, ports.ListTecnicosFilters{
 		Limit:                 limit,

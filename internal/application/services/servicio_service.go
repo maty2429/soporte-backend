@@ -18,17 +18,7 @@ func NewServicioService(repo ports.ServicioRepository) *ServicioService {
 }
 
 func (s *ServicioService) List(ctx context.Context, q ListServiciosQuery) (ListServiciosResult, error) {
-	limit := q.Limit
-	if limit <= 0 {
-		limit = 50
-	}
-	if limit > MaxListLimit {
-		limit = MaxListLimit
-	}
-	offset := q.Offset
-	if offset < 0 {
-		offset = 0
-	}
+	limit, offset := normalizePagination(q.Limit, q.Offset)
 
 	items, total, err := s.repo.List(ctx, ports.ListServiciosFilters{
 		Edificio:  strings.TrimSpace(q.Edificio),
