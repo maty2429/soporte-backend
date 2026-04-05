@@ -45,7 +45,6 @@ func TestCreateTecnicoOK(t *testing.T) {
 
 	tipoTec := 1
 	depto := 1
-	turno := 1
 
 	tec, err := svc.Create(ctx, services.CreateTecnicoCommand{
 		Rut:                   "11111111",
@@ -53,7 +52,6 @@ func TestCreateTecnicoOK(t *testing.T) {
 		NombreCompleto:        "TECNICO UNO",
 		IDTipoTecnico:         &tipoTec,
 		IDDepartamentoSoporte: &depto,
-		IDTipoTurno:           &turno,
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)

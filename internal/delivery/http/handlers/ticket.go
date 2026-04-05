@@ -1,10 +1,11 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 
 	"soporte/internal/application/services"
-	"soporte/internal/core/domain"
 	"soporte/internal/delivery/http/contracts"
 )
 
@@ -28,7 +29,7 @@ func (h TicketHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	json(c, 200, contracts.NewTicketResponse(ticket))
+	json(c, http.StatusOK, contracts.NewTicketResponse(ticket))
 }
 
 func (h TicketHandler) ListTickets(c *gin.Context) {
@@ -80,7 +81,7 @@ func (h TicketHandler) UpdateTicket(c *gin.Context) {
 		return
 	}
 
-	json(c, 200, contracts.NewTicketResponse(ticket))
+	json(c, http.StatusOK, contracts.NewTicketResponse(ticket))
 }
 
 func (h TicketHandler) ListBitacora(c *gin.Context) {
@@ -95,23 +96,17 @@ func (h TicketHandler) ListBitacora(c *gin.Context) {
 		return
 	}
 
-	json(c, 200, contracts.NewBitacorasResponse(items))
+	json(c, http.StatusOK, contracts.NewBitacorasResponse(items))
 }
 
 func (h TicketHandler) GetByNroTicket(c *gin.Context) {
-	nro := c.Param("nro")
-	if nro == "" {
-		fail(c, domain.ValidationError("nro_ticket is required", nil))
-		return
-	}
-
-	detalle, err := h.service.GetByNroTicket(c.Request.Context(), nro)
+	detalle, err := h.service.GetByNroTicket(c.Request.Context(), c.Param("nro"))
 	if err != nil {
 		fail(c, err)
 		return
 	}
 
-	json(c, 200, contracts.NewTicketDetalleResponse(detalle))
+	json(c, http.StatusOK, contracts.NewTicketDetalleResponse(detalle))
 }
 
 func (h TicketHandler) Create(c *gin.Context) {
@@ -160,7 +155,7 @@ func (h TicketHandler) Assign(c *gin.Context) {
 		return
 	}
 
-	json(c, 200, contracts.NewAssignTicketResponse(ticket))
+	json(c, http.StatusOK, contracts.NewAssignTicketResponse(ticket))
 }
 
 func (h TicketHandler) ListPausas(c *gin.Context) {
@@ -209,7 +204,7 @@ func (h TicketHandler) CreatePausa(c *gin.Context) {
 		return
 	}
 
-	created(c, "", contracts.NewPausaResponse(pausa))
+	json(c, http.StatusCreated, contracts.NewPausaResponse(pausa))
 }
 
 func (h TicketHandler) ResolverPausa(c *gin.Context) {
@@ -233,7 +228,7 @@ func (h TicketHandler) ResolverPausa(c *gin.Context) {
 		return
 	}
 
-	json(c, 200, gin.H{"message": "pausa resuelta correctamente"})
+	json(c, http.StatusOK, gin.H{"message": "pausa resuelta correctamente"})
 }
 
 func (h TicketHandler) ReanudarTicket(c *gin.Context) {
@@ -256,7 +251,7 @@ func (h TicketHandler) ReanudarTicket(c *gin.Context) {
 		return
 	}
 
-	json(c, 200, gin.H{"message": "ticket reanudado correctamente"})
+	json(c, http.StatusOK, gin.H{"message": "ticket reanudado correctamente"})
 }
 
 func (h TicketHandler) Close(c *gin.Context) {
@@ -282,7 +277,7 @@ func (h TicketHandler) Close(c *gin.Context) {
 		return
 	}
 
-	json(c, 200, gin.H{"message": "ticket cerrado correctamente"})
+	json(c, http.StatusOK, gin.H{"message": "ticket cerrado correctamente"})
 }
 
 func (h TicketHandler) ChangeEstado(c *gin.Context) {
@@ -306,7 +301,7 @@ func (h TicketHandler) ChangeEstado(c *gin.Context) {
 		return
 	}
 
-	json(c, 200, gin.H{"message": "estado actualizado correctamente"})
+	json(c, http.StatusOK, gin.H{"message": "estado actualizado correctamente"})
 }
 
 func (h TicketHandler) CreateTraspaso(c *gin.Context) {
@@ -331,7 +326,7 @@ func (h TicketHandler) CreateTraspaso(c *gin.Context) {
 		return
 	}
 
-	created(c, "", contracts.NewTraspasoResponse(traspaso))
+	json(c, http.StatusCreated, contracts.NewTraspasoResponse(traspaso))
 }
 
 func (h TicketHandler) ResolverTraspaso(c *gin.Context) {
@@ -361,7 +356,7 @@ func (h TicketHandler) ResolverTraspaso(c *gin.Context) {
 		return
 	}
 
-	json(c, 200, gin.H{"message": "traspaso resuelto correctamente"})
+	json(c, http.StatusOK, gin.H{"message": "traspaso resuelto correctamente"})
 }
 
 func (h TicketHandler) ListTraspasos(c *gin.Context) {

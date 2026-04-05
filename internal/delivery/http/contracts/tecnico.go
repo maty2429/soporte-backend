@@ -3,11 +3,11 @@ package contracts
 import "soporte/internal/core/domain"
 
 type ListTecnicosQuery struct {
-	Limit                 int    `form:"limit"                  binding:"omitempty,gt=0,lte=100"`
-	Offset                int    `form:"offset"                 binding:"omitempty,gte=0"`
-	Search                string `form:"q"                      binding:"omitempty,max=100"`
-	Estado                *bool  `form:"estado"                 binding:"omitempty"`
-	IDTipoTecnico         int    `form:"id_tipo_tecnico"        binding:"omitempty,gt=0"`
+	Limit                 int    `form:"limit"                   binding:"omitempty,gt=0,lte=100"`
+	Offset                int    `form:"offset"                  binding:"omitempty,gte=0"`
+	Search                string `form:"q"                       binding:"omitempty,max=100"`
+	Estado                *bool  `form:"estado"                  binding:"omitempty"`
+	IDTipoTecnico         int    `form:"id_tipo_tecnico"         binding:"omitempty,gt=0"`
 	IDDepartamentoSoporte int    `form:"id_departamento_soporte" binding:"omitempty,gt=0"`
 }
 
@@ -17,7 +17,6 @@ type CreateTecnicoRequest struct {
 	NombreCompleto        string `json:"nombre_completo"         binding:"required"`
 	IDTipoTecnico         *int   `json:"id_tipo_tecnico"         binding:"omitempty,gt=0"`
 	IDDepartamentoSoporte *int   `json:"id_departamento_soporte" binding:"omitempty,gt=0"`
-	IDTipoTurno           *int   `json:"id_tipo_turno"           binding:"omitempty,gt=0"`
 	Estado                *bool  `json:"estado"                  binding:"omitempty"`
 }
 
@@ -27,7 +26,6 @@ type UpdateTecnicoRequest struct {
 	NombreCompleto        *string `json:"nombre_completo"         binding:"omitempty"`
 	IDTipoTecnico         *int    `json:"id_tipo_tecnico"         binding:"omitempty,gt=0"`
 	IDDepartamentoSoporte *int    `json:"id_departamento_soporte" binding:"omitempty,gt=0"`
-	IDTipoTurno           *int    `json:"id_tipo_turno"           binding:"omitempty,gt=0"`
 	Estado                *bool   `json:"estado"                  binding:"omitempty"`
 }
 
@@ -38,15 +36,11 @@ type TecnicoResponse struct {
 	NombreCompleto        string                             `json:"nombre_completo"`
 	IDTipoTecnico         *int                               `json:"id_tipo_tecnico,omitempty"`
 	IDDepartamentoSoporte *int                               `json:"id_departamento_soporte,omitempty"`
-	IDTipoTurno           *int                               `json:"id_tipo_turno,omitempty"`
 	Estado                bool                               `json:"estado"`
-	CreatedAt             string                             `json:"created_at"`
-	UpdatedAt             string                             `json:"updated_at"`
 	DepartamentoSoporte   *TicketDepartamentoSoporteResponse `json:"departamento_soporte,omitempty"`
 }
 
 func NewTecnicoResponse(t domain.Tecnico) TecnicoResponse {
-	const timeFmt = "2006-01-02T15:04:05Z07:00"
 	return TecnicoResponse{
 		ID:                    t.ID,
 		Rut:                   t.Rut,
@@ -54,10 +48,7 @@ func NewTecnicoResponse(t domain.Tecnico) TecnicoResponse {
 		NombreCompleto:        t.NombreCompleto,
 		IDTipoTecnico:         t.IDTipoTecnico,
 		IDDepartamentoSoporte: t.IDDepartamentoSoporte,
-		IDTipoTurno:           t.IDTipoTurno,
 		Estado:                t.Estado,
-		CreatedAt:             t.CreatedAt.Format(timeFmt),
-		UpdatedAt:             t.UpdatedAt.Format(timeFmt),
 		DepartamentoSoporte:   newTicketDepartamentoSoporteResponse(t.DepartamentoSoporte),
 	}
 }

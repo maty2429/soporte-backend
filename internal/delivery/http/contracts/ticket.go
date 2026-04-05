@@ -87,7 +87,6 @@ type TicketTecnicoResponse struct {
 	NombreCompleto        string `json:"nombre_completo"`
 	IDTipoTecnico         *int   `json:"id_tipo_tecnico,omitempty"`
 	IDDepartamentoSoporte *int   `json:"id_departamento_soporte,omitempty"`
-	IDTipoTurno           *int   `json:"id_tipo_turno,omitempty"`
 	Estado                bool   `json:"estado"`
 }
 
@@ -509,7 +508,6 @@ func newTicketTecnicoResponse(t *domain.Tecnico) *TicketTecnicoResponse {
 		NombreCompleto:        t.NombreCompleto,
 		IDTipoTecnico:         t.IDTipoTecnico,
 		IDDepartamentoSoporte: t.IDDepartamentoSoporte,
-		IDTipoTurno:           t.IDTipoTurno,
 		Estado:                t.Estado,
 	}
 }

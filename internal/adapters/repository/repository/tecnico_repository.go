@@ -36,11 +36,11 @@ func (r *TecnicoRepository) List(ctx context.Context, f ports.ListTecnicosFilter
 		q = q.Where("id_departamento = ?", f.IDDepartamentoSoporte)
 	}
 	if f.Estado != nil {
-		q = q.Where("estado = ?", *f.Estado)
+		q = q.Where("activo = ?", *f.Estado)
 	}
 
 	var total int64
-	if err := q.Count(&total).Error; err != nil {
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, 0, wrapListError("tecnicos", err)
 	}
 
@@ -85,16 +85,12 @@ func (r *TecnicoRepository) Update(ctx context.Context, t *domain.Tecnico) error
 	row := toTecnicoDB(*t)
 	err := r.db.WithContext(ctx).
 		Model(&row).
-		Select("Rut", "Dv", "NombreCompleto", "IDTipoTecnico", "IDDepartamentoSoporte", "IDTipoTurno", "Estado").
+		Select("Rut", "Dv", "NombreCompleto", "IDTipoTecnico", "IDDepartamentoSoporte", "Activo").
 		Updates(&row).Error
 	return wrapUpdateError("tecnico", err)
 }
 
 func toTecnicoDomain(row dbmodels.Tecnico) domain.Tecnico {
-	var estado bool
-	if row.Estado != nil {
-		estado = *row.Estado
-	}
 	return domain.Tecnico{
 		ID:                    row.ID,
 		Rut:                   row.Rut,
@@ -102,11 +98,20 @@ func toTecnicoDomain(row dbmodels.Tecnico) domain.Tecnico {
 		NombreCompleto:        row.NombreCompleto,
 		IDTipoTecnico:         row.IDTipoTecnico,
 		IDDepartamentoSoporte: row.IDDepartamentoSoporte,
-		IDTipoTurno:           row.IDTipoTurno,
-		Estado:                estado,
-		CreatedAt:             row.CreatedAt,
-		UpdatedAt:             row.UpdatedAt,
+		Estado:                derefBool(row.Activo),
 		DepartamentoSoporte:   toDepartamentoSoportePtr(row.DepartamentoSoporte),
+	}
+}
+
+func toTecnicoDB(t domain.Tecnico) dbmodels.Tecnico {
+	return dbmodels.Tecnico{
+		ID:                    t.ID,
+		Rut:                   t.Rut,
+		Dv:                    t.Dv,
+		NombreCompleto:        t.NombreCompleto,
+		IDTipoTecnico:         t.IDTipoTecnico,
+		IDDepartamentoSoporte: t.IDDepartamentoSoporte,
+		Activo:                &t.Estado,
 	}
 }
 
@@ -168,18 +173,5 @@ func toHorarioTurnoDomain(row dbmodels.ConfiguracionHorarioTurno) domain.Configu
 		DiaSemana:   row.DiaSemana,
 		HoraInicio:  row.HoraInicio,
 		HoraFin:     row.HoraFin,
-	}
-}
-
-func toTecnicoDB(t domain.Tecnico) dbmodels.Tecnico {
-	return dbmodels.Tecnico{
-		ID:                    t.ID,
-		Rut:                   t.Rut,
-		Dv:                    t.Dv,
-		NombreCompleto:        t.NombreCompleto,
-		IDTipoTecnico:         t.IDTipoTecnico,
-		IDDepartamentoSoporte: t.IDDepartamentoSoporte,
-		IDTipoTurno:           t.IDTipoTurno,
-		Estado:                &t.Estado,
 	}
 }

@@ -1,7 +1,5 @@
 package domain
 
-import "time"
-
 type ConfiguracionHorarioTurno struct {
 	ID          int
 	IDTipoTurno int
@@ -17,9 +15,6 @@ type Tecnico struct {
 	NombreCompleto        string
 	IDTipoTecnico         *int
 	IDDepartamentoSoporte *int
-	IDTipoTurno           *int
 	Estado                bool
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
 	DepartamentoSoporte   *DepartamentoSoporte
 }

@@ -77,7 +77,6 @@ func (h TecnicoHandler) Create(c *gin.Context) {
 		NombreCompleto:        request.NombreCompleto,
 		IDTipoTecnico:         request.IDTipoTecnico,
 		IDDepartamentoSoporte: request.IDDepartamentoSoporte,
-		IDTipoTurno:           request.IDTipoTurno,
 		Estado:                request.Estado,
 	})
 	if err != nil {
@@ -106,7 +105,6 @@ func (h TecnicoHandler) Update(c *gin.Context) {
 		NombreCompleto:        request.NombreCompleto,
 		IDTipoTecnico:         request.IDTipoTecnico,
 		IDDepartamentoSoporte: request.IDDepartamentoSoporte,
-		IDTipoTurno:           request.IDTipoTurno,
 		Estado:                request.Estado,
 	})
 	if err != nil {

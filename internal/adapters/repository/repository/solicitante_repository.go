@@ -40,7 +40,8 @@ func (r *SolicitanteRepository) List(ctx context.Context, filters ports.ListSoli
 		query = query.Where("estado = ?", *filters.Estado)
 	}
 
-	if err := query.Count(&total).Error; err != nil {
+	// Clone the query before Count to avoid GORM mutating shared state.
+	if err := query.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, 0, wrapListError("solicitantes", err)
 	}
 
@@ -63,7 +64,7 @@ func (r *SolicitanteRepository) List(ctx context.Context, filters ports.ListSoli
 func (r *SolicitanteRepository) GetByID(ctx context.Context, id int) (domain.Solicitante, error) {
 	var row dbmodels.Solicitante
 
-	if err := r.db.WithContext(ctx).First(&row, id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Servicio").First(&row, id).Error; err != nil {
 		return domain.Solicitante{}, wrapDBError("solicitante", err)
 	}
 
@@ -108,24 +109,16 @@ func (r *SolicitanteRepository) Update(ctx context.Context, sol *domain.Solicita
 }
 
 func toSolicitanteDomain(row dbmodels.Solicitante) domain.Solicitante {
-	var correo string
-	if row.Correo != nil {
-		correo = *row.Correo
-	}
-	var estado bool
-	if row.Estado != nil {
-		estado = *row.Estado
-	}
 	return domain.Solicitante{
 		ID:             row.ID,
 		IDServicio:     row.IDServicio,
 		Servicio:       toServicioPtr(row.Servicio),
-		Correo:         correo,
+		Correo:         derefStr(row.Correo),
 		Rut:            row.Rut,
 		Dv:             row.Dv,
 		NombreCompleto: row.NombreCompleto,
 		Anexo:          row.Anexo,
-		Estado:         estado,
+		Estado:         derefBool(row.Estado),
 	}
 }
 

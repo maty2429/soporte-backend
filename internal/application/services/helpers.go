@@ -59,6 +59,14 @@ func wrapServiceError(op string, err error) error {
 	return domain.InternalError(op, err)
 }
 
+// ptrOrDefaultBool returns the dereferenced value of p if non-nil, otherwise def.
+func ptrOrDefaultBool(p *bool, def bool) bool {
+	if p == nil {
+		return def
+	}
+	return *p
+}
+
 // normalizePagination clamps limit and offset to sane values.
 // If limit is 0 or negative it falls back to DefaultListLimit.
 // If limit exceeds MaxListLimit it is clamped to MaxListLimit.

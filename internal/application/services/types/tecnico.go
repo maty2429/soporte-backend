@@ -24,7 +24,6 @@ type CreateTecnicoCommand struct {
 	NombreCompleto        string
 	IDTipoTecnico         *int
 	IDDepartamentoSoporte *int
-	IDTipoTurno           *int
 	Estado                *bool
 }
 
@@ -50,6 +49,5 @@ type UpdateTecnicoCommand struct {
 	NombreCompleto        *string
 	IDTipoTecnico         *int
 	IDDepartamentoSoporte *int
-	IDTipoTurno           *int
 	Estado                *bool
 }

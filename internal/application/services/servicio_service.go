@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"soporte/internal/core/domain"
@@ -29,11 +28,7 @@ func (s *ServicioService) List(ctx context.Context, q ListServiciosQuery) (ListS
 		Offset:    offset,
 	})
 	if err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return ListServiciosResult{}, err
-		}
-		return ListServiciosResult{}, domain.InternalError("list servicios", err)
+		return ListServiciosResult{}, wrapServiceError("list servicios", err)
 	}
 
 	return ListServiciosResult{
@@ -55,11 +50,7 @@ func (s *ServicioService) Create(ctx context.Context, cmd CreateServicioCommand)
 	}
 
 	if err := s.repo.Create(ctx, &item); err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.Servicio{}, err
-		}
-		return domain.Servicio{}, domain.InternalError("create servicio", err)
+		return domain.Servicio{}, wrapServiceError("create servicio", err)
 	}
 
 	return item, nil
@@ -68,11 +59,7 @@ func (s *ServicioService) Create(ctx context.Context, cmd CreateServicioCommand)
 func (s *ServicioService) Update(ctx context.Context, cmd UpdateServicioCommand) (domain.Servicio, error) {
 	item, err := s.repo.GetByID(ctx, cmd.ID)
 	if err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.Servicio{}, err
-		}
-		return domain.Servicio{}, domain.InternalError("get servicio", err)
+		return domain.Servicio{}, wrapServiceError("get servicio", err)
 	}
 
 	if cmd.Edificio != nil {
@@ -95,11 +82,7 @@ func (s *ServicioService) Update(ctx context.Context, cmd UpdateServicioCommand)
 	}
 
 	if err := s.repo.Update(ctx, &item); err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.Servicio{}, err
-		}
-		return domain.Servicio{}, domain.InternalError("update servicio", err)
+		return domain.Servicio{}, wrapServiceError("update servicio", err)
 	}
 
 	return item, nil

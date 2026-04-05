@@ -192,6 +192,14 @@ func derefBool(b *bool) bool {
 	return *b
 }
 
+// derefStr safely dereferences a *string, returning "" if nil.
+func derefStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 // isConnectionError reports whether the error is a database connectivity failure.
 // Covers: connection refused, dropped connections, bad connections from the pool,
 // and broken pipes — all of which indicate the DB is unreachable at runtime.

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -40,25 +41,25 @@ func (h ServicioHandler) List(c *gin.Context) {
 }
 
 func (h ServicioHandler) Create(c *gin.Context) {
-	request, ok := bindJSON[contracts.CreateServicioRequest](c)
+	req, ok := bindJSON[contracts.CreateServicioRequest](c)
 	if !ok {
 		return
 	}
 
 	item, err := h.service.Create(c.Request.Context(), services.CreateServicioCommand{
-		Edificio:                request.Edificio,
-		Piso:                    request.Piso,
-		Servicios:               request.Servicios,
-		Ubicacion:               request.Ubicacion,
-		Unidades:                request.Unidades,
-		IDNivelPrioridadDefault: request.IDNivelPrioridadDefault,
+		Edificio:                req.Edificio,
+		Piso:                    req.Piso,
+		Servicios:               req.Servicios,
+		Ubicacion:               req.Ubicacion,
+		Unidades:                req.Unidades,
+		IDNivelPrioridadDefault: req.IDNivelPrioridadDefault,
 	})
 	if err != nil {
 		fail(c, err)
 		return
 	}
 
-	json(c, http.StatusCreated, contracts.NewServicioResponse(item))
+	created(c, fmt.Sprintf("/api/v1/servicios/%d", item.ID), contracts.NewServicioResponse(item))
 }
 
 func (h ServicioHandler) Update(c *gin.Context) {
@@ -67,19 +68,19 @@ func (h ServicioHandler) Update(c *gin.Context) {
 		return
 	}
 
-	request, ok := bindJSON[contracts.UpdateServicioRequest](c)
+	req, ok := bindJSON[contracts.UpdateServicioRequest](c)
 	if !ok {
 		return
 	}
 
 	item, err := h.service.Update(c.Request.Context(), services.UpdateServicioCommand{
 		ID:                      id,
-		Edificio:                request.Edificio,
-		Piso:                    request.Piso,
-		Servicios:               request.Servicios,
-		Ubicacion:               request.Ubicacion,
-		Unidades:                request.Unidades,
-		IDNivelPrioridadDefault: request.IDNivelPrioridadDefault,
+		Edificio:                req.Edificio,
+		Piso:                    req.Piso,
+		Servicios:               req.Servicios,
+		Ubicacion:               req.Ubicacion,
+		Unidades:                req.Unidades,
+		IDNivelPrioridadDefault: req.IDNivelPrioridadDefault,
 	})
 	if err != nil {
 		fail(c, err)

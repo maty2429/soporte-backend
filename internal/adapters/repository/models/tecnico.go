@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 type Tecnico struct {
 	ID                    int                  `gorm:"column:id;primaryKey"`
 	Rut                   string               `gorm:"column:rut;size:10;not null;uniqueIndex"`
@@ -9,10 +7,7 @@ type Tecnico struct {
 	NombreCompleto        string               `gorm:"column:nombre_completo;not null"`
 	IDTipoTecnico         *int                 `gorm:"column:id_tipo_tecnico"`
 	IDDepartamentoSoporte *int                 `gorm:"column:id_departamento"`
-	IDTipoTurno           *int                 `gorm:"column:id_tipo_turno"`
-	Estado                *bool                `gorm:"column:estado;default:true"`
-	CreatedAt             time.Time            `gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt             time.Time            `gorm:"column:updated_at;autoUpdateTime"`
+	Activo                *bool                `gorm:"column:activo;default:true"`
 	DepartamentoSoporte   *DepartamentoSoporte `gorm:"-:migration;foreignKey:IDDepartamentoSoporte;references:ID"`
 }
 

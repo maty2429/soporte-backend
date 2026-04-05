@@ -37,7 +37,7 @@ func listCatalogo[M any, D any](db *gorm.DB, ctx context.Context, resource strin
 // getCatalogoByID is a generic helper for fetching a catalog row by primary key.
 func getCatalogoByID[M any, D any](db *gorm.DB, ctx context.Context, id int, resource string, mapFn func(M) D) (D, error) {
 	var row M
-	if err := db.WithContext(ctx).Where("id = ?", id).Take(&row).Error; err != nil {
+	if err := db.WithContext(ctx).First(&row, id).Error; err != nil {
 		var zero D
 		return zero, wrapDBError(resource, err)
 	}

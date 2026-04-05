@@ -2,10 +2,7 @@ package services
 
 import (
 	"context"
-	"errors"
 	"strings"
-
-	"gorm.io/gorm"
 
 	"soporte/internal/core/domain"
 	"soporte/internal/core/ports"
@@ -31,11 +28,7 @@ func (s *TecnicoService) List(ctx context.Context, q ListTecnicosQuery) (ListTec
 		IDDepartamentoSoporte: q.IDDepartamentoSoporte,
 	})
 	if err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return ListTecnicosResult{}, err
-		}
-		return ListTecnicosResult{}, domain.InternalError("list tecnicos", err)
+		return ListTecnicosResult{}, wrapServiceError("list tecnicos", err)
 	}
 
 	return ListTecnicosResult{
@@ -49,14 +42,7 @@ func (s *TecnicoService) List(ctx context.Context, q ListTecnicosQuery) (ListTec
 func (s *TecnicoService) GetByID(ctx context.Context, id int) (domain.Tecnico, error) {
 	t, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.Tecnico{}, domain.NotFoundError("tecnico", err)
-		}
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.Tecnico{}, err
-		}
-		return domain.Tecnico{}, domain.InternalError("get tecnico", err)
+		return domain.Tecnico{}, wrapServiceError("get tecnico", err)
 	}
 	return t, nil
 }
@@ -69,14 +55,7 @@ func (s *TecnicoService) GetByRut(ctx context.Context, raw string) (domain.Tecni
 
 	t, err := s.repo.GetByRutDV(ctx, rut, dv)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.Tecnico{}, domain.NotFoundError("tecnico", err)
-		}
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.Tecnico{}, err
-		}
-		return domain.Tecnico{}, domain.InternalError("get tecnico by rut", err)
+		return domain.Tecnico{}, wrapServiceError("get tecnico by rut", err)
 	}
 	return t, nil
 }
@@ -92,30 +71,20 @@ func (s *TecnicoService) Create(ctx context.Context, cmd CreateTecnicoCommand) (
 		return domain.Tecnico{}, domain.ValidationError("nombre_completo is required", nil)
 	}
 
-	estado := true
-	if cmd.Estado != nil {
-		estado = *cmd.Estado
-	}
-
 	t := domain.Tecnico{
 		Rut:                   strings.TrimSpace(cmd.Rut),
 		Dv:                    strings.TrimSpace(cmd.Dv),
 		NombreCompleto:        strings.TrimSpace(cmd.NombreCompleto),
 		IDTipoTecnico:         cmd.IDTipoTecnico,
 		IDDepartamentoSoporte: cmd.IDDepartamentoSoporte,
-		IDTipoTurno:           cmd.IDTipoTurno,
-		Estado:                estado,
+		Estado:                ptrOrDefaultBool(cmd.Estado, true),
 	}
 
 	if err := s.repo.Create(ctx, &t); err != nil {
 		if isDuplicateKeyError(err) {
 			return domain.Tecnico{}, domain.ConflictError("rut already exists", err)
 		}
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.Tecnico{}, err
-		}
-		return domain.Tecnico{}, domain.InternalError("create tecnico", err)
+		return domain.Tecnico{}, wrapServiceError("create tecnico", err)
 	}
 
 	return t, nil
@@ -128,8 +97,7 @@ func (s *TecnicoService) Update(ctx context.Context, cmd UpdateTecnicoCommand) (
 	}
 
 	if cmd.Rut == nil && cmd.Dv == nil && cmd.NombreCompleto == nil &&
-		cmd.IDTipoTecnico == nil && cmd.IDDepartamentoSoporte == nil &&
-		cmd.IDTipoTurno == nil && cmd.Estado == nil {
+		cmd.IDTipoTecnico == nil && cmd.IDDepartamentoSoporte == nil && cmd.Estado == nil {
 		return domain.Tecnico{}, domain.ValidationError("at least one field must be provided", nil)
 	}
 
@@ -148,9 +116,6 @@ func (s *TecnicoService) Update(ctx context.Context, cmd UpdateTecnicoCommand) (
 	if cmd.IDDepartamentoSoporte != nil {
 		t.IDDepartamentoSoporte = cmd.IDDepartamentoSoporte
 	}
-	if cmd.IDTipoTurno != nil {
-		t.IDTipoTurno = cmd.IDTipoTurno
-	}
 	if cmd.Estado != nil {
 		t.Estado = *cmd.Estado
 	}
@@ -159,11 +124,7 @@ func (s *TecnicoService) Update(ctx context.Context, cmd UpdateTecnicoCommand) (
 		if isDuplicateKeyError(err) {
 			return domain.Tecnico{}, domain.ConflictError("rut already exists", err)
 		}
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.Tecnico{}, err
-		}
-		return domain.Tecnico{}, domain.InternalError("update tecnico", err)
+		return domain.Tecnico{}, wrapServiceError("update tecnico", err)
 	}
 
 	return t, nil
@@ -174,11 +135,7 @@ func (s *TecnicoService) Update(ctx context.Context, cmd UpdateTecnicoCommand) (
 func (s *TecnicoService) ListHorariosTurno(ctx context.Context) ([]domain.ConfiguracionHorarioTurno, error) {
 	items, err := s.repo.ListHorariosTurno(ctx)
 	if err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return nil, err
-		}
-		return nil, domain.InternalError("list horarios turno", err)
+		return nil, wrapServiceError("list horarios turno", err)
 	}
 	return items, nil
 }
@@ -207,11 +164,7 @@ func (s *TecnicoService) CreateHorarioTurno(ctx context.Context, cmd CreateHorar
 	}
 
 	if err := s.repo.CreateHorarioTurno(ctx, &h); err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.ConfiguracionHorarioTurno{}, err
-		}
-		return domain.ConfiguracionHorarioTurno{}, domain.InternalError("create horario turno", err)
+		return domain.ConfiguracionHorarioTurno{}, wrapServiceError("create horario turno", err)
 	}
 
 	return h, nil
@@ -220,11 +173,7 @@ func (s *TecnicoService) CreateHorarioTurno(ctx context.Context, cmd CreateHorar
 func (s *TecnicoService) UpdateHorarioTurno(ctx context.Context, cmd UpdateHorarioTurnoCommand) (domain.ConfiguracionHorarioTurno, error) {
 	h, err := s.repo.GetHorarioTurnoByID(ctx, cmd.ID)
 	if err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.ConfiguracionHorarioTurno{}, err
-		}
-		return domain.ConfiguracionHorarioTurno{}, domain.InternalError("get horario turno", err)
+		return domain.ConfiguracionHorarioTurno{}, wrapServiceError("get horario turno", err)
 	}
 
 	if cmd.IDTipoTurno == nil && cmd.DiaSemana == nil && cmd.HoraInicio == nil && cmd.HoraFin == nil {
@@ -248,11 +197,7 @@ func (s *TecnicoService) UpdateHorarioTurno(ctx context.Context, cmd UpdateHorar
 	}
 
 	if err := s.repo.UpdateHorarioTurno(ctx, &h); err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.ConfiguracionHorarioTurno{}, err
-		}
-		return domain.ConfiguracionHorarioTurno{}, domain.InternalError("update horario turno", err)
+		return domain.ConfiguracionHorarioTurno{}, wrapServiceError("update horario turno", err)
 	}
 
 	return h, nil

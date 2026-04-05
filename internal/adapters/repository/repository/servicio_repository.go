@@ -39,7 +39,7 @@ func (r *ServicioRepository) List(ctx context.Context, f ports.ListServiciosFilt
 	}
 
 	var total int64
-	if err := q.Count(&total).Error; err != nil {
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, 0, wrapListError("servicio", err)
 	}
 
@@ -57,7 +57,7 @@ func (r *ServicioRepository) List(ctx context.Context, f ports.ListServiciosFilt
 
 func (r *ServicioRepository) GetByID(ctx context.Context, id int) (domain.Servicio, error) {
 	var row dbmodels.Servicio
-	if err := r.db.WithContext(ctx).Where("id = ?", id).Take(&row).Error; err != nil {
+	if err := r.db.WithContext(ctx).First(&row, id).Error; err != nil {
 		return domain.Servicio{}, wrapDBError("servicio", err)
 	}
 	return toServicioDomain(row), nil

@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"soporte/internal/core/domain"
@@ -20,11 +19,7 @@ func NewCatalogoFallaService(repo ports.CatalogoFallaRepository) *CatalogoFallaS
 func (s *CatalogoFallaService) List(ctx context.Context) ([]domain.CatalogoFalla, error) {
 	items, err := s.repo.List(ctx)
 	if err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return nil, err
-		}
-		return nil, domain.InternalError("list catalogo fallas", err)
+		return nil, wrapServiceError("list catalogo fallas", err)
 	}
 	return items, nil
 }
@@ -56,11 +51,7 @@ func (s *CatalogoFallaService) Create(ctx context.Context, cmd CreateCatalogoFal
 		if isDuplicateKeyError(err) {
 			return domain.CatalogoFalla{}, domain.ConflictError("codigo_falla already exists", err)
 		}
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.CatalogoFalla{}, err
-		}
-		return domain.CatalogoFalla{}, domain.InternalError("create catalogo falla", err)
+		return domain.CatalogoFalla{}, wrapServiceError("create catalogo falla", err)
 	}
 
 	return item, nil
@@ -69,11 +60,7 @@ func (s *CatalogoFallaService) Create(ctx context.Context, cmd CreateCatalogoFal
 func (s *CatalogoFallaService) Update(ctx context.Context, cmd UpdateCatalogoFallaCommand) (domain.CatalogoFalla, error) {
 	item, err := s.repo.GetByID(ctx, cmd.ID)
 	if err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.CatalogoFalla{}, err
-		}
-		return domain.CatalogoFalla{}, domain.InternalError("get catalogo falla", err)
+		return domain.CatalogoFalla{}, wrapServiceError("get catalogo falla", err)
 	}
 
 	if cmd.CodigoFalla != nil {
@@ -105,11 +92,7 @@ func (s *CatalogoFallaService) Update(ctx context.Context, cmd UpdateCatalogoFal
 		if isDuplicateKeyError(err) {
 			return domain.CatalogoFalla{}, domain.ConflictError("codigo_falla already exists", err)
 		}
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.CatalogoFalla{}, err
-		}
-		return domain.CatalogoFalla{}, domain.InternalError("update catalogo falla", err)
+		return domain.CatalogoFalla{}, wrapServiceError("update catalogo falla", err)
 	}
 
 	return item, nil

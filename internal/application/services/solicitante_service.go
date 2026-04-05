@@ -2,10 +2,7 @@ package services
 
 import (
 	"context"
-	"errors"
 	"strings"
-
-	"gorm.io/gorm"
 
 	"soporte/internal/core/domain"
 	"soporte/internal/core/ports"
@@ -29,11 +26,7 @@ func (s *SolicitanteService) List(ctx context.Context, query ListSolicitantesQue
 		Estado: query.Estado,
 	})
 	if err != nil {
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return ListSolicitantesResult{}, err
-		}
-		return ListSolicitantesResult{}, domain.InternalError("list solicitantes", err)
+		return ListSolicitantesResult{}, wrapServiceError("list solicitantes", err)
 	}
 
 	return ListSolicitantesResult{
@@ -47,16 +40,8 @@ func (s *SolicitanteService) List(ctx context.Context, query ListSolicitantesQue
 func (s *SolicitanteService) GetByID(ctx context.Context, id int) (domain.Solicitante, error) {
 	sol, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.Solicitante{}, domain.NotFoundError("solicitante", err)
-		}
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.Solicitante{}, err
-		}
-		return domain.Solicitante{}, domain.InternalError("get solicitante", err)
+		return domain.Solicitante{}, wrapServiceError("get solicitante", err)
 	}
-
 	return sol, nil
 }
 
@@ -68,16 +53,8 @@ func (s *SolicitanteService) GetByRut(ctx context.Context, raw string) (domain.S
 
 	sol, err := s.repo.GetByRutDV(ctx, rut, dv)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.Solicitante{}, domain.NotFoundError("solicitante", err)
-		}
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.Solicitante{}, err
-		}
-		return domain.Solicitante{}, domain.InternalError("get solicitante by rut", err)
+		return domain.Solicitante{}, wrapServiceError("get solicitante by rut", err)
 	}
-
 	return sol, nil
 }
 
@@ -92,11 +69,6 @@ func (s *SolicitanteService) Create(ctx context.Context, command CreateSolicitan
 		return domain.Solicitante{}, domain.ValidationError("nombre_completo is required", nil)
 	}
 
-	estado := true
-	if command.Estado != nil {
-		estado = *command.Estado
-	}
-
 	sol := domain.Solicitante{
 		IDServicio:     command.IDServicio,
 		Correo:         strings.TrimSpace(strings.ToLower(command.Correo)),
@@ -104,18 +76,14 @@ func (s *SolicitanteService) Create(ctx context.Context, command CreateSolicitan
 		Dv:             strings.TrimSpace(command.Dv),
 		NombreCompleto: strings.TrimSpace(command.NombreCompleto),
 		Anexo:          command.Anexo,
-		Estado:         estado,
+		Estado:         ptrOrDefaultBool(command.Estado, true),
 	}
 
 	if err := s.repo.Create(ctx, &sol); err != nil {
 		if isDuplicateKeyError(err) {
 			return domain.Solicitante{}, domain.ConflictError("rut or correo already exists", err)
 		}
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.Solicitante{}, err
-		}
-		return domain.Solicitante{}, domain.InternalError("create solicitante", err)
+		return domain.Solicitante{}, wrapServiceError("create solicitante", err)
 	}
 
 	return sol, nil
@@ -158,13 +126,8 @@ func (s *SolicitanteService) Update(ctx context.Context, command UpdateSolicitan
 		if isDuplicateKeyError(err) {
 			return domain.Solicitante{}, domain.ConflictError("rut or correo already exists", err)
 		}
-		var appErr *domain.Error
-		if errors.As(err, &appErr) {
-			return domain.Solicitante{}, err
-		}
-		return domain.Solicitante{}, domain.InternalError("update solicitante", err)
+		return domain.Solicitante{}, wrapServiceError("update solicitante", err)
 	}
 
 	return sol, nil
 }
-

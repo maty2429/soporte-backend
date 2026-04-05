@@ -73,13 +73,12 @@ func (r *TicketRepository) ListTickets(ctx context.Context, f ports.ListTicketsF
 	q := applyListTicketsFilters(r.db.WithContext(ctx).Model(&dbmodels.Ticket{}), f)
 
 	var total int64
-	if err := q.Count(&total).Error; err != nil {
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, 0, wrapListError("tickets", err)
 	}
 
 	var rows []dbmodels.Ticket
-	dataQuery := preloadTicketRelations(applyListTicketsFilters(r.db.WithContext(ctx).Model(&dbmodels.Ticket{}), f))
-	if err := dataQuery.Order("ticket.created_at DESC").Offset(f.Offset).Limit(f.Limit).Find(&rows).Error; err != nil {
+	if err := preloadTicketRelations(q).Order("ticket.created_at DESC").Offset(f.Offset).Limit(f.Limit).Find(&rows).Error; err != nil {
 		return nil, 0, wrapListError("tickets", err)
 	}
 
@@ -285,7 +284,7 @@ func (r *TicketRepository) ListPausas(ctx context.Context, f ports.ListPausasFil
 	}
 
 	var total int64
-	if err := q.Count(&total).Error; err != nil {
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, 0, wrapListError("ticket pausas", err)
 	}
 
@@ -375,7 +374,7 @@ func (r *TicketRepository) ListTraspasos(ctx context.Context, f ports.ListTraspa
 	}
 
 	var total int64
-	if err := q.Count(&total).Error; err != nil {
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, 0, wrapListError("ticket traspasos", err)
 	}
 

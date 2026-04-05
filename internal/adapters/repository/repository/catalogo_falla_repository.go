@@ -22,20 +22,12 @@ func NewCatalogoFallaRepository(db *gorm.DB) ports.CatalogoFallaRepository {
 }
 
 func (r *CatalogoFallaRepository) List(ctx context.Context) ([]domain.CatalogoFalla, error) {
-	var rows []dbmodels.CatalogoFalla
-	if err := r.db.WithContext(ctx).Order("id ASC").Find(&rows).Error; err != nil {
-		return nil, wrapListError("catalogo falla", err)
-	}
-	items := make([]domain.CatalogoFalla, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, toCatalogoFallaDomain(row))
-	}
-	return items, nil
+	return listCatalogo(r.db, ctx, "catalogo falla", toCatalogoFallaDomain)
 }
 
 func (r *CatalogoFallaRepository) GetByID(ctx context.Context, id int) (domain.CatalogoFalla, error) {
 	var row dbmodels.CatalogoFalla
-	if err := r.db.WithContext(ctx).Where("id = ?", id).Take(&row).Error; err != nil {
+	if err := r.db.WithContext(ctx).First(&row, id).Error; err != nil {
 		return domain.CatalogoFalla{}, wrapDBError("catalogo falla", err)
 	}
 	return toCatalogoFallaDomain(row), nil
